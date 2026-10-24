@@ -905,30 +905,84 @@ html, body {
     opacity: 0.6;
 }
 
-/* FLOATING COMBAT DAMAGE NUMBERS */
+/* FLOATING COMBAT DAMAGE NUMBERS - JUICY GAME FEEL */
 .damage-number {
     position: absolute;
     pointer-events: none;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 24px;
+    font-family: 'Impact', 'Share Tech Mono', sans-serif;
+    font-size: 28px;
     font-weight: 900;
+    letter-spacing: 1px;
     color: #ff3344;
-    text-shadow: 0 0 8px rgba(255, 51, 68, 0.8), 0 2px 4px #000;
-    transform: translate(-50%, -50%);
-    animation: floatUpFade 0.65s forwards ease-out;
+    -webkit-text-stroke: 1.5px #110000;
+    text-shadow: 0 0 10px rgba(255, 51, 68, 0.9), 0 4px 6px rgba(0, 0, 0, 0.9);
+    transform: translate(-50%, -50%) scale(1.4);
+    animation: juicyDmgPop 0.75s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
     z-index: 120;
+    user-select: none;
 }
 
 .damage-number.crit {
-    font-size: 32px;
-    color: #ffcc00;
-    text-shadow: 0 0 12px rgba(255, 204, 0, 0.9), 0 2px 4px #000;
+    font-size: 38px;
+    color: #ffea00;
+    -webkit-text-stroke: 2px #441100;
+    text-shadow: 0 0 18px rgba(255, 234, 0, 1.0), 0 0 30px rgba(255, 60, 0, 0.8), 0 4px 8px #000;
+    animation: juicyCritPop 0.85s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
 }
 
-@keyframes floatUpFade {
-    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.85); }
-    30% { transform: translate(-50%, -85%) scale(1.2); }
-    100% { opacity: 0; transform: translate(-50%, -135%) scale(1.0); }
+.damage-number .crit-tag {
+    display: block;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: #ff3344;
+    -webkit-text-stroke: 0.8px #000;
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: bold;
+}
+
+@keyframes juicyDmgPop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -20%) scale(0.6);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -70%) scale(1.4);
+    }
+    30% {
+        transform: translate(-50%, -85%) scale(1.0);
+    }
+    75% {
+        opacity: 1;
+        transform: translate(-50%, -125%) scale(0.95);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -160%) scale(0.8);
+    }
+}
+
+@keyframes juicyCritPop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -20%) scale(0.7) rotate(-5deg);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -80%) scale(1.65) rotate(4deg);
+    }
+    30% {
+        transform: translate(-50%, -100%) scale(1.15) rotate(-2deg);
+    }
+    75% {
+        opacity: 1;
+        transform: translate(-50%, -140%) scale(1.05) rotate(0deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -180%) scale(0.85);
+    }
 }
 
 /* --- SETTINGS BUTTON & MODAL --- */

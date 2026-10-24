@@ -31,6 +31,26 @@ class ChronoGame {
         this.isGrounded = true;
         this.cameraHeight = 1.7; // 1.7 standing, 0.95 crouching
 
+        // Game Juice & Combat Feel Engine (Freeze Frame / Hit Stop, Trauma Shake)
+        this.hitStopTimer = 0;
+        this.cameraTrauma = 0;
+        this.shakeOffset = new THREE.Vector3();
+        this.shakeRotation = new THREE.Vector3();
+        this.levelGeometry = [];
+
+        // Movement Immersion (Speed-synced Head Bob, Strafe Banking, Jump Landing, Weapon Sway)
+        this.strideCycle = 0;
+        this.bobOffset = new THREE.Vector3();
+        this.lastBobSin = 0;
+        this.strafeRoll = 0;
+        this.landingCompression = 0;
+        this.lastGrounded = true;
+        this.weaponSway = { x: 0, y: 0 };
+        this.targetWeaponSway = { x: 0, y: 0 };
+
+        // Tactical Radar State
+        this.radarSweepAngle = 0;
+
         // Time Dilation & 6-Second Powers State
         this.isTimeFrozen = true;
         this.timeAdvanceTicks = 0;
@@ -206,6 +226,8 @@ class ChronoGame {
     }
 
     buildLevelArchitecture() {
+        this.levelGeometry = [];
+
         // --- SECTOR 1: MEDITERRANEAN FORTRESS COURTYARD (Act 1 - Image 2 & 3) ---
         const cobbleMat = new THREE.MeshStandardMaterial({
             map: this.textures.cobblestone,
@@ -217,6 +239,7 @@ class ChronoGame {
         courtyardFloor.rotation.x = -Math.PI / 2;
         courtyardFloor.position.set(0, 0, 0);
         this.scene.add(courtyardFloor);
+        this.levelGeometry.push(courtyardFloor);
 
         const stoneMat = new THREE.MeshStandardMaterial({
             map: this.textures.ancientStone,
@@ -230,6 +253,7 @@ class ChronoGame {
             wall.position.set(x, y, z);
             wall.rotation.y = rotY;
             this.scene.add(wall);
+            this.levelGeometry.push(wall);
             return wall;
         };
 
@@ -397,6 +421,7 @@ class ChronoGame {
         facilityFloor.rotation.x = -Math.PI / 2;
         facilityFloor.position.set(0, 0, -55);
         this.scene.add(facilityFloor);
+        this.levelGeometry.push(facilityFloor);
 
         const conduitWallMat = new THREE.MeshStandardMaterial({
             map: this.textures.conduitWall,
@@ -408,10 +433,12 @@ class ChronoGame {
         const leftCorrWall = new THREE.Mesh(new THREE.BoxGeometry(1.2, 7.5, 60), conduitWallMat);
         leftCorrWall.position.set(-6, 3.75, -55);
         this.scene.add(leftCorrWall);
+        this.levelGeometry.push(leftCorrWall);
 
         const rightCorrWall = new THREE.Mesh(new THREE.BoxGeometry(1.2, 7.5, 60), conduitWallMat);
         rightCorrWall.position.set(6, 3.75, -55);
         this.scene.add(rightCorrWall);
+        this.levelGeometry.push(rightCorrWall);
 
         const corrCeil = new THREE.Mesh(new THREE.PlaneGeometry(12, 60), conduitWallMat);
         corrCeil.rotation.x = Math.PI / 2;
@@ -538,6 +565,7 @@ class ChronoGame {
         vaultFloor.rotation.x = -Math.PI / 2;
         vaultFloor.position.set(0, 0, -140);
         this.scene.add(vaultFloor);
+        this.levelGeometry.push(vaultFloor);
 
         addWall(80, 12, 0, 6, -180);
         addWall(80, 12, -40, 6, -140, Math.PI / 2);
@@ -1211,17 +1239,106 @@ class ChronoGame {
             alertBox.style.opacity = '1';
             setTimeout(() => { alertBox.style.opacity = '0'; }, 600);
         }
-        this.camera.rotation.z = (Math.random() - 0.5) * 0.2;
+        this.addTrauma(0.35);
+        this.triggerHitStop(0.06);
+    }
+
+    // --- GAME JUICE & COMBAT FEEL ENGINE ---
+    triggerHitStop(duration = 0.045) {
+        this.hitStopTimer = Math.max(this.hitStopTimer, duration);
+    }
+
+    addTrauma(amount) {
+        this.cameraTrauma = Math.min(1.0, this.cameraTrauma + amount);
+    }
+
+    updateCameraTrauma(delta) {
+        if (this.cameraTrauma > 0) {
+            const shake = this.cameraTrauma * this.cameraTrauma; // Quadratic trauma curve
+            const maxPitch = 0.045;
+            const maxYaw = 0.045;
+            const maxRoll = 0.065;
+            const maxPos = 0.08;
+
+            this.shakeRotation.x = (Math.random() * 2 - 1) * maxPitch * shake;
+            this.shakeRotation.y = (Math.random() * 2 - 1) * maxYaw * shake;
+            this.shakeRotation.z = (Math.random() * 2 - 1) * maxRoll * shake;
+            this.shakeOffset.x = (Math.random() * 2 - 1) * maxPos * shake;
+            this.shakeOffset.y = (Math.random() * 2 - 1) * maxPos * shake;
+            this.shakeOffset.z = (Math.random() * 2 - 1) * (maxPos * 0.4) * shake;
+
+            this.cameraTrauma = Math.max(0, this.cameraTrauma - delta * 1.6);
+        } else {
+            this.shakeRotation.set(0, 0, 0);
+            this.shakeOffset.set(0, 0, 0);
+        }
+    }
+
+    updateWeaponSwayAndBob(delta, now) {
+        if (!this.weaponContainer) return;
+
+        // Smoothly interpolate weapon sway toward target look delta
+        this.weaponSway.x = THREE.MathUtils.lerp(this.weaponSway.x, this.targetWeaponSway.x, delta * 12.0);
+        this.weaponSway.y = THREE.MathUtils.lerp(this.weaponSway.y, this.targetWeaponSway.y, delta * 12.0);
+        this.targetWeaponSway.x = THREE.MathUtils.lerp(this.targetWeaponSway.x, 0, delta * 10.0);
+        this.targetWeaponSway.y = THREE.MathUtils.lerp(this.targetWeaponSway.y, 0, delta * 10.0);
+
+        // Organic breathing oscillation
+        const breath = Math.sin(now * 0.0018) * 0.003;
+
+        // Harmonic weapon bobbing linked to footsteps
+        const moveBobX = Math.cos(this.strideCycle * 0.5) * 0.005;
+        const moveBobY = Math.sin(this.strideCycle) * 0.006;
+
+        this.weaponContainer.position.x = this.weaponSway.x + moveBobX;
+        this.weaponContainer.position.y = this.weaponSway.y + breath + moveBobY;
+        this.weaponContainer.rotation.z = -this.weaponSway.x * 0.65;
+        this.weaponContainer.rotation.y = this.weaponSway.x * 0.45;
+        this.weaponContainer.rotation.x = breath * 0.4;
+    }
+
+    createSparkParticles(pos, normal = new THREE.Vector3(0, 1, 0)) {
+        const count = 12;
+        for (let i = 0; i < count; i++) {
+            const size = 0.035 + Math.random() * 0.035;
+            const sparkMat = new THREE.MeshBasicMaterial({
+                color: Math.random() > 0.3 ? 0xffea00 : 0xffffff
+            });
+            const p = new THREE.Mesh(new THREE.BoxGeometry(size, size, size * 2.5), sparkMat);
+            p.position.copy(pos);
+
+            const spread = new THREE.Vector3(
+                (Math.random() - 0.5) * 2.2,
+                (Math.random() - 0.5) * 2.2,
+                (Math.random() - 0.5) * 2.2
+            );
+            const vel = normal.clone().multiplyScalar(4.5 + Math.random() * 5.0).add(spread);
+            p.lookAt(p.position.clone().add(vel));
+
+            this.scene.add(p);
+            this.particles.push({ mesh: p, velocity: vel, life: 0.22 + Math.random() * 0.15, isSpark: true });
+        }
     }
 
     gameLoop(now) {
         const delta = Math.min((now - this.lastFrameTime) / 1000, 0.1);
         this.lastFrameTime = now;
 
+        // Update Screen Shake Trauma & Weapon Sway/Bobbing
+        this.updateCameraTrauma(delta);
+        this.updateWeaponSwayAndBob(delta, now);
+
         this.handlePlayerLook();
         this.handleWeaponsAndShooting(now);
         this.handlePowers(delta);
         this.handleGrenadeAction();
+
+        // Hit Lag / Freeze Frame: Brief time-dilation pause on bullet impact
+        let isHitStopped = false;
+        if (this.hitStopTimer > 0) {
+            this.hitStopTimer -= delta;
+            isHitStopped = true;
+        }
 
         const isFiringThisTick = this.input.isFiring || this.input.pendingFire;
         const timeAdvances = AluLogicBridge.calculateTimeAdvance(
@@ -1247,22 +1364,23 @@ class ChronoGame {
 
         // Stride slows down world to 0.25x slow-motion, Time Freeze freezes world completely
         const worldDelta = this.strideActive ? (delta * 0.25) : delta;
-        const monstersCanMove = timeAdvances && !this.manualFreezeActive;
-        const worldPhysicsAdvance = !this.manualFreezeActive;
+        const monstersCanMove = timeAdvances && !this.manualFreezeActive && !isHitStopped;
+        const worldPhysicsAdvance = !this.manualFreezeActive && !isHitStopped;
 
         this.updateMonsters(worldDelta, monstersCanMove);
         this.updateProjectiles(worldDelta, worldPhysicsAdvance);
-        this.updateParticles(worldDelta, worldPhysicsAdvance);
+        this.updateParticles(worldDelta, true);
         this.updateSpentCasings(delta);
         this.updatePickups(delta);
         this.checkActObjectives();
         this.drawMinimapRadar();
 
-        // Animate Wooden Fortress Gates Swinging Open smoothly
+        // Animate Wooden Fortress Gates Swinging Open smoothly with sustained rumble
         if (this.gatesOpening && this.gateOpenAngle < Math.PI * 0.48) {
             this.gateOpenAngle = Math.min(Math.PI * 0.48, this.gateOpenAngle + delta * 1.4);
             if (this.gateLeftGroup) this.gateLeftGroup.rotation.y = -this.gateOpenAngle;
             if (this.gateRightGroup) this.gateRightGroup.rotation.y = this.gateOpenAngle;
+            this.addTrauma(0.012);
         }
 
         // Floating Crystals Orbit & Bob in Act 3
@@ -1290,8 +1408,16 @@ class ChronoGame {
         this.playerPitch -= d.y;
         this.playerPitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, this.playerPitch));
 
+        // Weapon sway accumulation from look movement
+        this.targetWeaponSway.x += -d.x * 0.45;
+        this.targetWeaponSway.y += -d.y * 0.45;
+        this.targetWeaponSway.x = Math.max(-0.06, Math.min(0.06, this.targetWeaponSway.x));
+        this.targetWeaponSway.y = Math.max(-0.05, Math.min(0.05, this.targetWeaponSway.y));
+
         this.player.rotation.y = this.playerYaw;
-        this.camera.rotation.x = this.playerPitch;
+        this.camera.rotation.x = this.playerPitch + this.shakeRotation.x;
+        this.camera.rotation.y = this.shakeRotation.y;
+        this.camera.rotation.z = this.strafeRoll + this.shakeRotation.z;
 
         // Dynamic FOV: Zoom in on ADS (42 deg), expand on Kinetic Stride (+8 deg hyper-speed sensation)
         let targetFOV = this.input.isADS ? 42 : 75;
@@ -1302,7 +1428,9 @@ class ChronoGame {
 
         const targetHeight = this.input.isCrouching ? 0.95 : 1.7;
         this.cameraHeight = THREE.MathUtils.lerp(this.cameraHeight, targetHeight, 0.18);
-        this.camera.position.y = this.cameraHeight;
+        this.camera.position.x = this.bobOffset.x + this.shakeOffset.x;
+        this.camera.position.y = this.cameraHeight + this.bobOffset.y + this.shakeOffset.y - this.landingCompression;
+        this.camera.position.z = this.shakeOffset.z;
     }
 
     handlePlayerMovement(delta) {
@@ -1331,6 +1459,15 @@ class ChronoGame {
             }
         }
 
+        // Jump landing impact compression and tactile thud
+        if (!this.lastGrounded && this.isGrounded) {
+            this.landingCompression = 0.16;
+            this.addTrauma(0.18);
+            this.audio.playJumpLand();
+        }
+        this.landingCompression = THREE.MathUtils.lerp(this.landingCompression, 0, delta * 14.0);
+        this.lastGrounded = this.isGrounded;
+
         // In Act 2 Kinetic Trap: Stride grants full immunity; normal speed triggers non-Newtonian dampener block
         if (this.currentAct === 2 && this.player.position.z < -25 && this.player.position.z > -85) {
             if (!this.strideActive) {
@@ -1356,7 +1493,30 @@ class ChronoGame {
             this.player.position.addScaledVector(moveDir, targetSpeed);
         }
 
-        this.camera.rotation.z = THREE.MathUtils.lerp(this.camera.rotation.z, 0, 0.1);
+        // Speed-Synced Head Bobbing & Procedural Footsteps
+        if (m.magnitude > 0.05 && this.isGrounded) {
+            const bobRate = (targetSpeed > 0.15) ? 82.0 : 55.0;
+            this.strideCycle += targetSpeed * delta * bobRate;
+            this.bobOffset.y = Math.sin(this.strideCycle) * 0.038;
+            this.bobOffset.x = Math.cos(this.strideCycle * 0.5) * 0.022;
+
+            const currentSin = Math.sin(this.strideCycle);
+            if (currentSin < -0.92 && this.lastBobSin >= -0.92) {
+                let surface = "cobblestone";
+                if (this.currentAct === 2) surface = "wood";
+                else if (this.currentAct === 3) surface = "metal";
+                this.audio.playFootstep(surface);
+            }
+            this.lastBobSin = currentSin;
+        } else {
+            this.bobOffset.lerp(new THREE.Vector3(0, 0, 0), delta * 10.0);
+        }
+
+        // Strafe Camera Roll Banking (tilt camera into strafe direction)
+        let targetRoll = 0;
+        if (m.x < -0.15) targetRoll = -0.042; // Strafe Left -> tilt camera left (-2.4 deg)
+        else if (m.x > 0.15) targetRoll = 0.042; // Strafe Right -> tilt camera right (+2.4 deg)
+        this.strafeRoll = THREE.MathUtils.lerp(this.strafeRoll, targetRoll, delta * 10.0);
     }
 
     handleWeaponsAndShooting(now) {
@@ -1393,6 +1553,9 @@ class ChronoGame {
         this.audio.playGunshot(wepType);
         this.audio.playTimeWarp();
         this.ejectCasing(wepType);
+
+        // Firing Recoil Trauma Shake
+        this.addTrauma(wepType === "cannon" ? 0.35 : wepType === "pistol" ? 0.05 : 0.08);
 
         this.muzzleLight.intensity = 3.0;
         setTimeout(() => { this.muzzleLight.intensity = 0; }, 50);
@@ -1450,12 +1613,23 @@ class ChronoGame {
             if (hitTargets.length > 0) {
                 hitTargets.sort((a, b) => a.distance - b.distance);
                 const target = hitTargets[0];
-                this.damageMonster(target.monster, wep.damage, target.point);
+                this.damageMonster(target.monster, wep.damage, target.point, lookDir);
 
                 const hm = document.getElementById('hit-marker');
                 if (hm) {
                     hm.style.opacity = '1';
                     setTimeout(() => { hm.style.opacity = '0'; }, 80);
+                }
+            } else if (this.levelGeometry.length > 0) {
+                // Architectural wall/floor hits -> spawn rich sparks and play ricochet audio
+                const geoHits = raycaster.intersectObjects(this.levelGeometry, true);
+                if (geoHits.length > 0) {
+                    const hit = geoHits[0];
+                    const norm = hit.face ? hit.face.normal.clone() : new THREE.Vector3(0, 1, 0);
+                    if (hit.object) norm.applyQuaternion(hit.object.getWorldQuaternion(new THREE.Quaternion()));
+                    this.createSparkParticles(hit.point, norm);
+                    this.audio.playWallRicochet();
+                    this.addTrauma(0.025);
                 }
             }
         } else {
@@ -1532,8 +1706,13 @@ class ChronoGame {
     }
 
     detonateGrenade(grenade) {
-        this.audio.playGunshot("cannon");
+        this.audio.playExplosion();
         this.audio.playPowerChime();
+        this.addTrauma(0.65);
+        this.triggerHitStop(0.08);
+
+        // Spawn explosive spall sparks
+        this.createSparkParticles(grenade.mesh.position, new THREE.Vector3(0, 1, 0));
 
         const shockGeo = new THREE.SphereGeometry(grenade.radius * 0.6, 24, 24);
         const shockMat = new THREE.MeshBasicMaterial({
@@ -1559,7 +1738,8 @@ class ChronoGame {
             const m = this.monsters[i];
             const dist = m.position.distanceTo(grenade.mesh.position);
             if (dist <= grenade.radius) {
-                this.damageMonster(m, grenade.damage, grenade.mesh.position);
+                const blastDir = new THREE.Vector3().subVectors(m.position, grenade.mesh.position).normalize();
+                this.damageMonster(m, grenade.damage, grenade.mesh.position, blastDir);
             }
         }
     }
@@ -1654,8 +1834,39 @@ class ChronoGame {
         this.showNotification("CHRONO STASIS CORE SYNCED! TAP [FREEZE] OR PRESS [F] FOR 6s TIME STOP");
     }
 
-    damageMonster(monster, damage, hitPoint) {
+    damageMonster(monster, damage, hitPoint, lookDir = null) {
+        const isCrit = (damage >= 50);
         monster.health -= damage;
+
+        // Hit Lag / Freeze Frame: Instant impact weight
+        this.triggerHitStop(isCrit ? 0.075 : 0.045);
+
+        // Screen Shake
+        this.addTrauma(isCrit ? 0.28 : 0.12);
+
+        // Hit Marker Audio
+        this.audio.playHitImpact(isCrit);
+
+        // Material Hit Flash: Instant white emissive flare
+        monster.hitFlashTimer = 0.085;
+        monster.traverse(child => {
+            if (child.isMesh && child.material) {
+                if (!child.userData.origEmissive) {
+                    child.userData.origEmissive = child.material.emissive ? child.material.emissive.clone() : new THREE.Color(0, 0, 0);
+                }
+                if (child.material.emissive) {
+                    child.material.emissive.setHex(0xffffff);
+                }
+            }
+        });
+
+        // Squash & Stretch Wobble + Impact Pushback
+        monster.scale.set(1.28, 0.74, 1.28);
+        if (lookDir) {
+            const push = lookDir.clone().setY(0).normalize();
+            monster.position.addScaledVector(push, isCrit ? 0.45 : 0.22);
+        }
+
         this.createBloodParticles(hitPoint);
 
         if (hitPoint) {
@@ -1663,7 +1874,7 @@ class ChronoGame {
             if (v.z < 1.0) {
                 const screenX = (v.x * 0.5 + 0.5) * window.innerWidth;
                 const screenY = (-(v.y * 0.5) + 0.5) * window.innerHeight;
-                this.showFloatingDamage({ x: screenX, y: screenY }, damage, damage >= 50);
+                this.showFloatingDamage({ x: screenX, y: screenY }, damage, isCrit);
             }
         }
 
@@ -1674,6 +1885,10 @@ class ChronoGame {
             const scoreEl = document.getElementById('hud-score');
             if (killEl) killEl.textContent = this.kills;
             if (scoreEl) scoreEl.textContent = this.score;
+
+            // Extra kill punch
+            this.addTrauma(0.18);
+            this.triggerHitStop(0.06);
 
             this.scene.remove(monster);
             const idx = this.monsters.indexOf(monster);
@@ -1691,11 +1906,16 @@ class ChronoGame {
         if (!hud) return;
         const el = document.createElement('div');
         el.className = 'damage-number' + (isCrit ? ' crit' : '');
-        el.textContent = `-${damage}` + (isCrit ? ' CRIT!' : '');
-        el.style.left = `${Math.round(screenPos.x)}px`;
+        if (isCrit) {
+            el.innerHTML = `-${damage}<span class="crit-tag">CRIT!</span>`;
+        } else {
+            el.textContent = `-${damage}`;
+        }
+        const jitterX = (Math.random() - 0.5) * 26;
+        el.style.left = `${Math.round(screenPos.x + jitterX)}px`;
         el.style.top = `${Math.round(screenPos.y)}px`;
         hud.appendChild(el);
-        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 650);
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 800);
     }
 
     createBloodParticles(pos) {
@@ -1711,20 +1931,26 @@ class ChronoGame {
                 (Math.random() - 0.5) * 4
             );
             this.scene.add(p);
-            this.particles.push({ mesh: p, life: 0.6 });
+            this.particles.push({ mesh: p, velocity: p.velocity, life: 0.6, isSpark: false });
         }
     }
 
     updateParticles(delta, timeAdvances) {
-        if (!timeAdvances) return;
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
-            p.mesh.position.addScaledVector(p.velocity, delta);
-            p.velocity.y -= 9.8 * delta;
-            p.life -= delta;
-            if (p.life <= 0) {
-                this.scene.remove(p.mesh);
-                this.particles.splice(i, 1);
+            if (p.isSpark || timeAdvances) {
+                p.mesh.position.addScaledVector(p.velocity, delta);
+                if (p.isSpark) {
+                    p.velocity.y -= 14.0 * delta;
+                    p.velocity.multiplyScalar(0.92);
+                } else {
+                    p.velocity.y -= 9.8 * delta;
+                }
+                p.life -= delta;
+                if (p.life <= 0) {
+                    this.scene.remove(p.mesh);
+                    this.particles.splice(i, 1);
+                }
             }
         }
     }
@@ -1959,6 +2185,21 @@ class ChronoGame {
 
     updateMonsters(delta, timeAdvances) {
         this.monsters.forEach(m => {
+            // Hit Flash Emissive Decay
+            if (m.hitFlashTimer > 0) {
+                m.hitFlashTimer -= delta;
+                if (m.hitFlashTimer <= 0) {
+                    m.traverse(child => {
+                        if (child.isMesh && child.material && child.userData.origEmissive && child.material.emissive) {
+                            child.material.emissive.copy(child.userData.origEmissive);
+                        }
+                    });
+                }
+            }
+
+            // Squash & Stretch Scale Recovery Spring
+            m.scale.lerp(new THREE.Vector3(1, 1, 1), Math.min(1.0, delta * 15.0));
+
             if (m.isPeacefulApproaching) {
                 const toPlayer = new THREE.Vector3().subVectors(this.player.position, m.position);
                 toPlayer.y = 0;
@@ -2002,6 +2243,10 @@ class ChronoGame {
     }
 
     damagePlayer(amount) {
+        this.audio.playPlayerHurt();
+        this.triggerHitStop(0.06);
+        this.addTrauma(0.42);
+
         if (this.armor > 0) {
             this.armor = Math.max(0, this.armor - amount);
         } else {
@@ -2018,7 +2263,11 @@ class ChronoGame {
         if (hpLabel) hpLabel.textContent = `+ ${this.health}`;
         if (armorLabel) armorLabel.textContent = `${this.armor}`;
 
-        this.camera.rotation.z = (Math.random() - 0.5) * 0.15;
+        const dmgFlash = document.getElementById('damage-flash');
+        if (dmgFlash) {
+            dmgFlash.style.opacity = '0.85';
+            setTimeout(() => { dmgFlash.style.opacity = '0'; }, 160);
+        }
     }
 
     checkActObjectives() {
@@ -2075,31 +2324,76 @@ class ChronoGame {
         const h = canvas.height = 110;
         const cx = w / 2;
         const cy = h / 2;
+        const radius = 50;
         const scale = 1.8;
 
         ctx.clearRect(0, 0, w, h);
 
-        ctx.strokeStyle = "rgba(0, 240, 255, 0.12)";
+        // Circular Tactical Radar Bezel & Background
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.clip();
+
+        // Dark Tactical Scanner Background
+        const bgGrad = ctx.createRadialGradient(cx, cy, 5, cx, cy, radius);
+        bgGrad.addColorStop(0, "rgba(5, 20, 25, 0.88)");
+        bgGrad.addColorStop(0.75, "rgba(2, 10, 16, 0.94)");
+        bgGrad.addColorStop(1, "rgba(0, 5, 8, 0.98)");
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Tactical Coordinate Grid
+        ctx.strokeStyle = "rgba(0, 240, 255, 0.10)";
         ctx.lineWidth = 1;
-        for (let x = 10; x < w; x += 22) {
+        for (let x = 11; x < w; x += 22) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, h);
             ctx.stroke();
         }
-        for (let y = 10; y < h; y += 22) {
+        for (let y = 11; y < h; y += 22) {
             ctx.beginPath();
             ctx.moveTo(0, y);
             ctx.lineTo(w, y);
             ctx.stroke();
         }
 
+        // Concentric Tactical Range Rings (15m, 30m, 45m)
         ctx.strokeStyle = "rgba(0, 240, 255, 0.22)";
+        [16, 32, 46].forEach(r => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+
+        // Continuous 360-Degree Rotating Sonar Sweep Line with Phosphor Glow Wedge
+        this.radarSweepAngle = (this.radarSweepAngle + 0.045) % (Math.PI * 2);
+        const trailSteps = 16;
+        const trailArc = 0.55;
+        for (let i = 0; i < trailSteps; i++) {
+            const frac = i / trailSteps;
+            const a1 = this.radarSweepAngle - (1 - frac) * trailArc;
+            const a2 = a1 + (trailArc / trailSteps);
+            const alpha = 0.22 * Math.pow(frac, 2.0);
+
+            ctx.fillStyle = `rgba(0, 255, 200, ${alpha})`;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, a1, a2);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Leading Sonar Sweep Beam
+        ctx.strokeStyle = "rgba(100, 255, 220, 0.9)";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(cx, cy, 22, 0, Math.PI * 2);
-        ctx.arc(cx, cy, 44, 0, Math.PI * 2);
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(this.radarSweepAngle) * radius, cy + Math.sin(this.radarSweepAngle) * radius);
         ctx.stroke();
 
+        // World to Radar Transform (Player-centric heading)
         const cosY = Math.cos(this.playerYaw);
         const sinY = Math.sin(this.playerYaw);
         const toRadar = (wx, wz) => {
@@ -2111,7 +2405,8 @@ class ChronoGame {
             };
         };
 
-        ctx.strokeStyle = "rgba(0, 240, 255, 0.55)";
+        // Draw Architectural Boundaries
+        ctx.strokeStyle = "rgba(0, 240, 255, 0.50)";
         ctx.lineWidth = 1.5;
 
         if (this.currentAct === 1) {
@@ -2128,10 +2423,11 @@ class ChronoGame {
             ctx.closePath();
             ctx.stroke();
 
+            // Fortress Gate Line (Golden amber or opening green)
             const g1 = toRadar(-5.5, -25);
             const g2 = toRadar(5.5, -25);
-            ctx.strokeStyle = "#ffd700";
-            ctx.lineWidth = 3;
+            ctx.strokeStyle = this.gatesOpening ? "#00ff88" : "#ffd700";
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
             ctx.moveTo(g1.x, g1.y);
             ctx.lineTo(g2.x, g2.y);
@@ -2150,54 +2446,130 @@ class ChronoGame {
             ctx.closePath();
             ctx.stroke();
 
+            // Sector 2 Kinetic Core Target Blip (Pulsing Amber Diamond)
             const coreP = toRadar(0, -80);
+            const pulse = 1.0 + Math.sin(performance.now() * 0.006) * 0.25;
             ctx.fillStyle = "#ffd700";
             ctx.beginPath();
-            ctx.moveTo(coreP.x, coreP.y - 5);
-            ctx.lineTo(coreP.x + 5, coreP.y);
-            ctx.lineTo(coreP.x, coreP.y + 5);
-            ctx.lineTo(coreP.x - 5, coreP.y);
+            ctx.moveTo(coreP.x, coreP.y - 6 * pulse);
+            ctx.lineTo(coreP.x + 6 * pulse, coreP.y);
+            ctx.lineTo(coreP.x, coreP.y + 6 * pulse);
+            ctx.lineTo(coreP.x - 6 * pulse, coreP.y);
             ctx.closePath();
             ctx.fill();
         }
 
-        const fovGrad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 42);
-        fovGrad.addColorStop(0, "rgba(255, 230, 0, 0.40)");
-        fovGrad.addColorStop(0.7, "rgba(0, 240, 255, 0.18)");
+        // Draw Pickups (Health = Cyan Cross, Ammo = Gold Crate)
+        this.pickups.forEach(p => {
+            if (!p.active) return;
+            const pt = toRadar(p.mesh.position.x, p.mesh.position.z);
+            if (pt.x >= 0 && pt.x <= w && pt.y >= 0 && pt.y <= h) {
+                if (p.type === 'health') {
+                    ctx.fillStyle = "#00ffcc";
+                    ctx.fillRect(pt.x - 3.5, pt.y - 1.2, 7, 2.4);
+                    ctx.fillRect(pt.x - 1.2, pt.y - 3.5, 2.4, 7);
+                } else {
+                    ctx.fillStyle = "#ffd700";
+                    ctx.fillRect(pt.x - 2.5, pt.y - 2.5, 5, 5);
+                }
+            }
+        });
+
+        // Translucent Forward Vision Cone (75 deg Field of View)
+        const fovGrad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 46);
+        fovGrad.addColorStop(0, "rgba(255, 230, 0, 0.35)");
+        fovGrad.addColorStop(0.65, "rgba(0, 240, 255, 0.16)");
         fovGrad.addColorStop(1, "rgba(0, 240, 255, 0.0)");
 
         ctx.fillStyle = fovGrad;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, 42, -Math.PI / 2 - 0.48, -Math.PI / 2 + 0.48);
+        ctx.arc(cx, cy, 46, -Math.PI / 2 - 0.48, -Math.PI / 2 + 0.48);
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = "#00f0ff";
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - 7);
-        ctx.lineTo(cx - 5, cy + 5);
-        ctx.lineTo(cx + 5, cy + 5);
-        ctx.closePath();
-        ctx.fill();
-
+        // Monster Entity Blips
         this.monsters.forEach(m => {
             const mp = toRadar(m.position.x, m.position.z);
             if (mp.x >= 0 && mp.x <= w && mp.y >= 0 && mp.y <= h) {
-                ctx.fillStyle = m.type === "bugged" ? "#bf00ff" : m.isPeacefulApproaching ? "#00ffcc" : m === this.talkingMonster ? "#00ff88" : "#ff3344";
-                ctx.beginPath();
-                ctx.arc(mp.x, mp.y, 3.8, 0, Math.PI * 2);
-                ctx.fill();
-
-                if (m.type === "aggressive") {
-                    ctx.strokeStyle = "rgba(255, 51, 68, 0.5)";
-                    ctx.lineWidth = 1;
+                if (m === this.talkingMonster || m.isPeacefulApproaching) {
+                    // Azazel Defector - Green Beacon with Halo Ring
+                    ctx.fillStyle = "#00ff88";
                     ctx.beginPath();
-                    ctx.arc(mp.x, mp.y, 6, 0, Math.PI * 2);
+                    ctx.arc(mp.x, mp.y, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = "rgba(0, 255, 136, 0.7)";
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.arc(mp.x, mp.y, 7.5 + Math.sin(performance.now() * 0.008) * 1.5, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (m.type === "bugged") {
+                    // Act 3 The Bugged - Glitched Violet Diamond
+                    ctx.fillStyle = "#bf00ff";
+                    ctx.beginPath();
+                    ctx.moveTo(mp.x, mp.y - 4);
+                    ctx.lineTo(mp.x + 4, mp.y);
+                    ctx.lineTo(mp.x, mp.y + 4);
+                    ctx.lineTo(mp.x - 4, mp.y);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Hostile Crimson Monster - Red Dot with Pulsing Threat Halo
+                    ctx.fillStyle = "#ff3344";
+                    ctx.beginPath();
+                    ctx.arc(mp.x, mp.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = "rgba(255, 51, 68, 0.55)";
+                    ctx.lineWidth = 1.0;
+                    ctx.beginPath();
+                    ctx.arc(mp.x, mp.y, 6.5, 0, Math.PI * 2);
                     ctx.stroke();
                 }
             }
         });
+
+        // Player Center Arrow Chevron
+        ctx.fillStyle = "#00f0ff";
+        ctx.shadowColor = "rgba(0, 240, 255, 0.8)";
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 8);
+        ctx.lineTo(cx - 5.5, cy + 6);
+        ctx.lineTo(cx, cy + 3.5);
+        ctx.lineTo(cx + 5.5, cy + 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.restore(); // Restore clip
+
+        // Tactical Compass Cardinal Markers (N, S, E, W) on Radar Bezel
+        const northAngle = -this.playerYaw - Math.PI / 2;
+        const cardinals = [
+            { label: 'N', angle: northAngle, color: '#00f0ff' },
+            { label: 'E', angle: northAngle + Math.PI / 2, color: 'rgba(0, 240, 255, 0.5)' },
+            { label: 'S', angle: northAngle + Math.PI, color: 'rgba(0, 240, 255, 0.5)' },
+            { label: 'W', angle: northAngle + Math.PI * 1.5, color: 'rgba(0, 240, 255, 0.5)' }
+        ];
+
+        ctx.font = 'bold 9px "Share Tech Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        cardinals.forEach(c => {
+            const bx = cx + Math.cos(c.angle) * (radius - 5);
+            const by = cy + Math.sin(c.angle) * (radius - 5);
+            ctx.fillStyle = c.color;
+            ctx.fillText(c.label, bx, by);
+        });
+
+        // Outer Bezel High-Tech Ring
+        ctx.strokeStyle = "rgba(0, 240, 255, 0.65)";
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
     }
 
     onWindowResize() {
@@ -2237,5 +2609,40 @@ window.addEventListener('DOMContentLoaded', () => {
     window.game.debugThrowGrenade = function() {
         this.input.wantsGrenade = true;
         this.handleGrenadeAction();
+    };
+    window.game.debugHitMonster = function(dmg = 65) {
+        let bestM = null;
+        let bestDist = 999;
+        this.monsters.forEach(m => {
+            if (m.position.z < this.player.position.z) {
+                const d = this.player.position.distanceTo(m.position);
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestM = m;
+                }
+            }
+        });
+        if (bestM) {
+            // Orient player camera directly toward the monster
+            const toM = new THREE.Vector3().subVectors(bestM.position, this.player.position);
+            this.playerYaw = Math.atan2(-toM.x, -toM.z);
+            this.playerPitch = 0.05;
+            const hitPt = bestM.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+            this.damageMonster(bestM, dmg, hitPt, new THREE.Vector3(0, 0, -1));
+        }
+    };
+    window.game.debugShootWall = function() {
+        this.playerPitch = 0;
+        this.playerYaw = 0;
+        this.fireBullet(this.weapons[1]);
+    };
+    window.game.debugDamagePlayer = function() {
+        this.damagePlayer(25);
+    };
+    window.game.debugStrafeBanking = function(dir = -1) {
+        this.input.movement = { x: dir, y: 0, magnitude: 1.0 };
+    };
+    window.game.debugJumpAndLand = function() {
+        this.input.wantsJump = true;
     };
 });

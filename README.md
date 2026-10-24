@@ -113,6 +113,75 @@ See the dedicated documentation in [`docs/AI_MAPS_AND_TEXTURES.md`](docs/AI_MAPS
 
 ---
 
+---
+
+## 💥 "Game Juice" & Game Feel Engine
+
+Chronofrag features a comprehensive **Game Juice / Game Feel** suite designed to make every combat interaction physically punchy, tactile, and immediately satisfying:
+
+### 1. Hit Lag / Freeze Frame (Hit Stop)
+- When a bullet strikes an enemy or an explosion detonates, the engine invokes **Hit Stop** (`triggerHitStop` for 45ms to 80ms).
+- World physics and enemy simulation briefly freeze in place on the exact frame of impact, letting the player absorb the physical force of the strike before resuming motion.
+
+### 2. Emissive Material Hit Flashes
+- When damaged, monsters flash in brilliant pure white (`#ffffff`) across all mesh surfaces for 85ms before smoothly decaying back to their standard textured materials.
+- When the player takes damage, an intense crimson directional vignette flash and camera jerk trigger simultaneously.
+
+### 3. Squash & Stretch Wobble Deformation
+- Enemy meshes deform upon impact: squashing along the vertical Y-axis ($0.74\times$) and stretching outward along the X/Z axes ($1.28\times$).
+- Monsters are knocked backwards along the bullet's trajectory vector, with a high-damped spring interpolating the mesh scale back to $(1.0, 1.0, 1.0)$.
+
+### 4. Trauma-Based Multi-Axis Screen Shake
+- Camera shake uses a nonlinear quadratic trauma model:
+  $$\text{shake} = \text{trauma}^2$$
+- Trauma is added proportionally by combat events:
+  - **Chrono Cannon Firing**: $+0.35$ trauma
+  - **Neon AK Burst**: $+0.08$ trauma
+  - **Grenade Detonation**: $+0.65$ trauma
+  - **Player Taking Damage**: $+0.42$ trauma
+  - **Fortress Gate Grinding**: $+0.012$ sustained rumble
+- Displaces camera pitch, yaw, roll, and $(x, y, z)$ position, decaying smoothly at $1.6\times \Delta t$.
+
+### 5. Juicy Animated Damage Numbers
+- Combat hits project screen-space damage numbers that pop in with an arcade bounce ($1.5\times \to 1.0\times$ scale), float upward with parabolic velocity, and scatter with slight horizontal jitter.
+- Standard hits render in high-contrast crimson (`#ff3344`) with dark drop shadows; critical headshots render in fiery gold (`#ffea00`) with red glow and a bold `CRIT!` badge.
+
+### 6. Architectural Wall Sparks & Ricochet
+- Stray bullets striking stone walls, metal pillars, or floor tiles spawn incandescent yellow/white spark particles reflecting along surface normals with velocity and gravity.
+- Accompanied by synthesized pitch-bending metallic ricochet audio pings.
+
+---
+
+## 📡 Tactical Radar & Minimap Overhaul
+
+Chronofrag's top-left HUD radar is a custom hardware-accelerated 2D canvas scanner:
+- **360° Rotating Sonar Sweep**: Continuous sweep beam rotating at $\sim 0.75\text{ rev/sec}$ with an angular phosphor persistence glow wedge trailing behind.
+- **Concentric Range Rings**: 15m, 30m, and 45m distance rings with tactical reticle grid lines.
+- **Compass Cardinal Markers**: 'N', 'S', 'E', 'W' cardinal indicators positioned along the outer radar bezel that rotate with player heading.
+- **Player Forward Vision Cone**: Translucent $75^\circ$ FOV gradient arc projecting forward from the player's center chevron.
+- **Tactical Entity Blips**:
+  - **Hostile Monsters**: Bright pulsing red dots with expanding threat halos.
+  - **Azazel (Anomaly Defector)**: Glowing emerald beacon with rotating targeting halo.
+  - **Nano-Medkits**: Cyan/green medical cross (`+`) blips.
+  - **Ammo Crates**: Amber supply crate icons.
+  - **Sector 2 Kinetic Core**: Pulsing golden diamond objective beacon.
+  - **Architecture**: Vector outlines of courtyard walls and animated fortress gates (amber when locked, emerald green when opened).
+
+---
+
+## 🏃 Movement Immersion & Physical Feel
+
+- **Speed-Synced Head Bobbing**: Harmonic vertical ($\Delta y$) and lateral ($\Delta x$) camera oscillations linked to player velocity.
+- **Surface-Aware Procedural Footsteps**: Synthesized Web Audio bursts tailored to current terrain:
+  - *Act 1 Courtyard*: Cobblestone stone thuds
+  - *Act 2 Facility*: Polished parquet wood clacks
+  - *Act 3 Vault*: Resonant metallic grid clicks
+- **Weapon Viewmodel Sway & Inertia**: First-person viewmodels gently lag behind camera pan/tilt, complemented by subtle idle breathing sway and stride bobbing.
+- **Strafe Camera Roll Banking**: Strafing left or right rolls the camera by $\pm 2.5^\circ$ into the turn.
+- **Jump Landing Impact**: Transitioning from airborne to grounded compresses camera height down by $-0.16\text{m}$, triggers $+0.18$ trauma shake, and plays a deep landing impact thud.
+
+---
+
 ## 📱 Mobile FPS Touch Layout
 
 The touch HUD is optimized for high-intensity mobile combat:
@@ -122,10 +191,11 @@ The touch HUD is optimized for high-intensity mobile combat:
   - **FIRE**: Large ergonomic thumb trigger with muzzle flash feedback.
   - **ADS (Aim Down Sights)**: Toggles optical scope zoom and tightens reticle.
   - **RELOAD**: Quick tactical mag swap.
-  - **FREEZE**: Manual time-freeze toggle (unlocked after Act 1).
-  - **STRIDE**: Kinetic dampening hyper-stride (unlocked after Act 2).
-- **Weapon Dock**: Quick switch between Dual Pistols, Neon AK-Chrono, and Heavy Cannon.
-- **Real-Time Minimap Radar**: Top-left tactical radar showing player orientation, vision cone, and color-coded entity blips (Red: Hostile, Green: Peaceful Talker, Purple: The Bugged).
+  - **FREEZE**: Manual 6-second time-freeze stasis toggle (unlocked after Act 1).
+  - **STRIDE**: 6-second hyper-velocity stride with 0.25x enemy slow-mo (unlocked after Act 2).
+  - **GRENADE**: Primed chronal explosive deployment.
+- **Weapon Dock**: Quick switch between Dual Pistols, Cosmic Neon AK-Chrono, and Heavy Cannon.
+- **Real-Time Tactical Radar**: High-tech circular radar scanner with sweep beam and compass.
 
 ---
 

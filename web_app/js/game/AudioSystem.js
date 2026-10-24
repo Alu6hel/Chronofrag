@@ -203,6 +203,218 @@ class ChronoAudioSystem {
             osc.stop(t + 0.4);
         });
     }
+
+    // Juicy Hit Marker / Impact Sound: high transient click + deep bass thud
+    playHitImpact(isCrit = false) {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+
+        // Punchy sub thud
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = isCrit ? "sawtooth" : "triangle";
+        const startFreq = isCrit ? 260 : 180;
+        osc.frequency.setValueAtTime(startFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(35, now + (isCrit ? 0.16 : 0.1));
+
+        gain.gain.setValueAtTime(isCrit ? 0.8 : 0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (isCrit ? 0.16 : 0.1));
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.18);
+
+        // Sharp high-frequency click
+        const clickOsc = this.ctx.createOscillator();
+        const clickGain = this.ctx.createGain();
+        clickOsc.type = "sine";
+        clickOsc.frequency.setValueAtTime(isCrit ? 2400 : 1600, now);
+        clickOsc.frequency.exponentialRampToValueAtTime(600, now + 0.04);
+
+        clickGain.gain.setValueAtTime(isCrit ? 0.6 : 0.35, now);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+        clickOsc.connect(clickGain);
+        clickGain.connect(this.ctx.destination);
+        clickOsc.start(now);
+        clickOsc.stop(now + 0.04);
+    }
+
+    // Player Hurt: Heavy impact + redout groan
+    playPlayerHurt() {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(25, now + 0.3);
+
+        gain.gain.setValueAtTime(0.7, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(450, now);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
+
+    // Procedural Footstep: Tailored to surface (cobblestone, wood, metal)
+    playFootstep(surfaceType = "cobblestone") {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+
+        // Filtered noise pulse
+        const bufferSize = Math.floor(this.ctx.sampleRate * 0.06);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.4));
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+
+        if (surfaceType === "metal") {
+            filter.type = "bandpass";
+            filter.frequency.setValueAtTime(1200 + (Math.random() * 200 - 100), now);
+            filter.Q.setValueAtTime(4.0, now);
+            gain.gain.setValueAtTime(0.25, now);
+        } else if (surfaceType === "wood") {
+            filter.type = "lowpass";
+            filter.frequency.setValueAtTime(400 + (Math.random() * 100 - 50), now);
+            gain.gain.setValueAtTime(0.3, now);
+        } else {
+            // Cobblestone / stone
+            filter.type = "bandpass";
+            filter.frequency.setValueAtTime(600 + (Math.random() * 150 - 75), now);
+            filter.Q.setValueAtTime(1.8, now);
+            gain.gain.setValueAtTime(0.22, now);
+        }
+
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noise.start(now);
+
+        // Low thud for body weight
+        const thud = this.ctx.createOscillator();
+        const thudGain = this.ctx.createGain();
+        thud.type = "sine";
+        thud.frequency.setValueAtTime(75, now);
+        thud.frequency.exponentialRampToValueAtTime(25, now + 0.05);
+
+        thudGain.gain.setValueAtTime(0.25, now);
+        thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+        thud.connect(thudGain);
+        thudGain.connect(this.ctx.destination);
+
+        thud.start(now);
+        thud.stop(now + 0.05);
+    }
+
+    // Jump Landing Thud
+    playJumpLand() {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + 0.2);
+
+        gain.gain.setValueAtTime(0.65, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
+
+    // Hard Wall Spark / Ricochet Ping
+    playWallRicochet() {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sine";
+        const freq = 1800 + Math.random() * 1200;
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.4, now + 0.12);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+    }
+
+    // Heavy Explosion: Grenades, Chrono Cannon impact
+    playExplosion() {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+
+        // Sub bass drop
+        const sub = this.ctx.createOscillator();
+        const subGain = this.ctx.createGain();
+        sub.type = "sawtooth";
+        sub.frequency.setValueAtTime(120, now);
+        sub.frequency.exponentialRampToValueAtTime(18, now + 0.6);
+
+        subGain.gain.setValueAtTime(1.0, now);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+        sub.connect(subGain);
+        subGain.connect(this.ctx.destination);
+        sub.start(now);
+        sub.stop(now + 0.6);
+
+        // Heavy roaring noise
+        const bufferSize = Math.floor(this.ctx.sampleRate * 0.5);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.35));
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(500, now);
+        filter.frequency.exponentialRampToValueAtTime(80, now + 0.5);
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.8, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+
+        noise.start(now);
+    }
 }
 
 window.ChronoAudio = new ChronoAudioSystem();
