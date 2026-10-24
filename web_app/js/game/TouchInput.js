@@ -9,6 +9,9 @@ class ChronoInput {
         this.isFiring = false;
         this.pendingFire = false;
         this.isADS = false;
+        this.isCrouching = false;
+        this.wantsJump = false;
+        this.wantsGrenade = false;
         this.wantsReload = false;
         this.wantsTimeFreeze = false;
         this.wantsKineticPower = false;
@@ -160,6 +163,9 @@ class ChronoInput {
         const btnReload = document.getElementById('btn-reload');
         const btnFreeze = document.getElementById('btn-power-freeze');
         const btnKinetic = document.getElementById('btn-power-kinetic');
+        const btnCrouch = document.getElementById('btn-crouch');
+        const btnJump = document.getElementById('btn-jump');
+        const btnGrenade = document.getElementById('btn-grenade');
 
         // Shoot Button (Touch + Mouse + Click)
         if (btnShoot) {
@@ -187,12 +193,47 @@ class ChronoInput {
         // ADS Toggle
         if (btnAds) {
             const toggleADS = (e) => {
-                e.preventDefault();
+                if (e.cancelable) e.preventDefault();
                 this.isADS = !this.isADS;
                 btnAds.classList.toggle('pressed', this.isADS);
             };
             btnAds.addEventListener('touchstart', toggleADS, { passive: false });
             btnAds.addEventListener('click', toggleADS);
+        }
+
+        // Crouch Stance Toggle
+        if (btnCrouch) {
+            const toggleCrouch = (e) => {
+                if (e.cancelable) e.preventDefault();
+                this.isCrouching = !this.isCrouching;
+                btnCrouch.classList.toggle('pressed', this.isCrouching);
+            };
+            btnCrouch.addEventListener('touchstart', toggleCrouch, { passive: false });
+            btnCrouch.addEventListener('click', toggleCrouch);
+        }
+
+        // Jump Button
+        if (btnJump) {
+            const triggerJump = (e) => {
+                if (e.cancelable) e.preventDefault();
+                this.wantsJump = true;
+                btnJump.classList.add('pressed');
+                setTimeout(() => btnJump.classList.remove('pressed'), 200);
+            };
+            btnJump.addEventListener('touchstart', triggerJump, { passive: false });
+            btnJump.addEventListener('click', triggerJump);
+        }
+
+        // Tactical Grenade Button
+        if (btnGrenade) {
+            const triggerGrenade = (e) => {
+                if (e.cancelable) e.preventDefault();
+                this.wantsGrenade = true;
+                btnGrenade.classList.add('pressed');
+                setTimeout(() => btnGrenade.classList.remove('pressed'), 200);
+            };
+            btnGrenade.addEventListener('touchstart', triggerGrenade, { passive: false });
+            btnGrenade.addEventListener('click', triggerGrenade);
         }
 
         // Reload Button
@@ -242,7 +283,10 @@ class ChronoInput {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
             if (e.code === 'KeyR') this.wantsReload = true;
-            if (e.code === 'Space') this.wantsTimeFreeze = true;
+            if (e.code === 'KeyF') this.wantsTimeFreeze = true;
+            if (e.code === 'Space') this.wantsJump = true;
+            if (e.code === 'KeyC') this.isCrouching = !this.isCrouching;
+            if (e.code === 'KeyG') this.wantsGrenade = true;
             if (e.code === 'KeyE') this.wantsKineticPower = true;
             if (e.code === 'Digit1') this.selectWeapon(0);
             if (e.code === 'Digit2') this.selectWeapon(1);

@@ -50,7 +50,7 @@ html, body {
 /* TOP BAR */
 .top-bar {
     position: absolute;
-    top: 12px;
+    top: 10px;
     left: 12px;
     right: 12px;
     display: flex;
@@ -58,20 +58,56 @@ html, body {
     align-items: flex-start;
 }
 
-/* MINIMAP & HEALTH */
+/* MINIMAP & QUICK CONTROLS (TOP LEFT) */
 .player-status-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
+}
+
+.minimap-container {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.minimap-quick-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+}
+
+.mini-btn {
+    background: rgba(10, 16, 26, 0.85);
+    border: 1px solid rgba(0, 240, 255, 0.4);
+    border-radius: 4px;
+    padding: 2px 5px;
+    font-size: 11px;
+    cursor: pointer;
+    color: #00f0ff;
+    transition: all 0.15s;
+}
+
+.mini-btn:active {
+    background: rgba(0, 240, 255, 0.3);
+    transform: scale(0.95);
+}
+
+.minimap-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: #ffd700;
 }
 
 .radar-wrapper {
-    width: 110px;
-    height: 110px;
-    background: rgba(10, 15, 20, 0.75);
-    border: 2px solid rgba(0, 240, 255, 0.6);
-    border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2), inset 0 0 10px rgba(0, 0, 0, 0.8);
+    width: 124px;
+    height: 124px;
+    background: rgba(8, 12, 18, 0.9);
+    border: 2px solid rgba(0, 240, 255, 0.7);
+    border-radius: 6px;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.25), inset 0 0 12px rgba(0, 0, 0, 0.9);
     position: relative;
     overflow: hidden;
 }
@@ -79,19 +115,20 @@ html, body {
 #radar-canvas {
     width: 100%;
     height: 100%;
+    display: block;
 }
 
 .health-armor-box {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    width: 150px;
+    width: 140px;
 }
 
 .bar-container {
     height: 14px;
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 3px;
     overflow: hidden;
     position: relative;
@@ -102,8 +139,8 @@ html, body {
 .bar-fill-hp {
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, #ff3344, #ff5566);
-    box-shadow: 0 0 8px rgba(255, 50, 70, 0.6);
+    background: linear-gradient(90deg, #00ff88, #20e090);
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
     transition: width 0.2s ease-out;
 }
 
@@ -119,47 +156,94 @@ html, body {
     position: absolute;
     left: 6px;
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 1px;
     text-shadow: 0 1px 2px #000;
+    color: #ffffff;
 }
 
-/* ROUND / ACT STATS (CENTER TOP) */
+/* MATCH STATUS & TEAM SCORE BAR (TOP CENTER - Images 2, 3, 4) */
+.match-center-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.team-score-bar {
+    display: flex;
+    align-items: center;
+    background: rgba(6, 10, 16, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.score-pill {
+    padding: 3px 14px;
+    font-size: 14px;
+    font-weight: 900;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+}
+
+.score-pill.blue-team {
+    background: #1d4ed8;
+    color: #ffffff;
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+.score-pill.red-team {
+    background: #dc2626;
+    color: #ffffff;
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+.match-timer {
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #ffffff;
+    font-family: 'Share Tech Mono', monospace;
+    background: rgba(20, 26, 36, 0.95);
+}
+
 .act-info-banner {
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: rgba(8, 12, 18, 0.8);
+    background: rgba(8, 12, 18, 0.85);
     border: 1px solid rgba(0, 240, 255, 0.4);
-    padding: 6px 16px;
+    padding: 4px 14px;
     border-radius: 6px;
     box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
 }
 
 .act-title {
-    font-size: 13px;
-    font-weight: 800;
+    font-size: 12px;
+    font-weight: 900;
     color: #00f0ff;
     letter-spacing: 2px;
     text-transform: uppercase;
 }
 
 .act-objective {
-    font-size: 11px;
+    font-size: 10px;
     color: #ffd166;
-    margin-top: 2px;
+    margin-top: 1px;
     font-weight: 600;
 }
 
 .time-dilation-badge {
-    margin-top: 4px;
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 4px;
+    margin-top: 3px;
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 3px;
     background: rgba(255, 40, 60, 0.3);
     border: 1px solid #ff3344;
     color: #ff99aa;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 1px;
 }
 
@@ -169,13 +253,40 @@ html, body {
     color: #88ffbb;
 }
 
-/* KILL & SCORE STATS (TOP RIGHT) */
-.score-group {
+/* COMBAT STATUS & KILL FEED (TOP RIGHT) */
+.combat-status-group {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    gap: 6px;
+}
+
+.kill-feed-container {
+    display: flex;
+    flex-direction: column;
     gap: 4px;
-    font-weight: 800;
+    align-items: flex-end;
+    min-height: 48px;
+}
+
+.kill-feed-item {
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(10, 14, 22, 0.85);
+    border-left: 3px solid #ff3344;
+    padding: 2px 8px;
+    border-radius: 0 4px 4px 0;
+    color: #ffffff;
+    animation: fadeInSlide 0.3s ease-out;
+}
+
+.kill-feed-item .killer { color: #00f0ff; }
+.kill-feed-item .weapon { color: #ffd700; margin: 0 4px; }
+.kill-feed-item .victim { color: #ff5566; }
+
+.stat-pill-row {
+    display: flex;
+    gap: 6px;
 }
 
 .stat-pill {
@@ -293,20 +404,20 @@ html, body {
     touch-action: none;
 }
 
-/* ACTION BUTTON CLUSTER (BOTTOM RIGHT) */
+/* ACTION BUTTON CLUSTER (BOTTOM RIGHT - Strict Reference to Images 2 & 3) */
 .action-cluster {
     position: absolute;
-    bottom: 25px;
-    right: 25px;
+    bottom: 20px;
+    right: 20px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 14px;
+    gap: 10px;
 }
 
 .action-row {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
 }
 
@@ -314,12 +425,13 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
     border-radius: 50%;
-    background: rgba(12, 18, 26, 0.8);
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(14, 20, 30, 0.85);
+    border: 2px solid rgba(255, 255, 255, 0.35);
     color: #ffffff;
     font-weight: 800;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
     cursor: pointer;
     touch-action: none;
     transition: transform 0.08s, background 0.1s, border-color 0.1s;
@@ -331,92 +443,177 @@ html, body {
     background: rgba(0, 240, 255, 0.3);
 }
 
-.btn-shoot {
-    width: 78px;
-    height: 78px;
-    border-color: rgba(255, 60, 80, 0.8);
-    background: radial-gradient(circle, rgba(255, 60, 80, 0.4) 0%, rgba(20, 10, 15, 0.8) 100%);
-    box-shadow: 0 0 20px rgba(255, 50, 70, 0.4);
+.hud-icon {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
 }
 
-.btn-shoot svg {
-    width: 40px;
-    height: 40px;
+/* Primary Shoot Trigger */
+.btn-shoot {
+    width: 82px;
+    height: 82px;
+    border-color: rgba(255, 60, 80, 0.9);
+    background: radial-gradient(circle, rgba(255, 60, 80, 0.5) 0%, rgba(30, 10, 15, 0.9) 100%);
+    box-shadow: 0 0 25px rgba(255, 50, 70, 0.5);
+}
+
+.btn-shoot .hud-icon {
+    width: 44px;
+    height: 44px;
     fill: #ffffff;
 }
 
+/* Precision ADS Scope */
 .btn-ads {
-    width: 56px;
-    height: 56px;
-    border-color: rgba(0, 240, 255, 0.6);
+    width: 58px;
+    height: 58px;
+    border-color: rgba(0, 240, 255, 0.7);
+    color: #00f0ff;
 }
 
-.btn-ads svg {
+.btn-ads .hud-icon {
+    width: 32px;
+    height: 32px;
+}
+
+/* Reload Button with Curved Arrows */
+.btn-reload {
+    width: 54px;
+    height: 54px;
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #ffffff;
+}
+
+.btn-reload .hud-icon {
     width: 28px;
     height: 28px;
-    fill: #00f0ff;
 }
 
-.btn-reload {
-    width: 50px;
-    height: 50px;
+/* Tactical Grenade Button */
+.btn-tactical {
+    width: 54px;
+    height: 54px;
+    border-color: rgba(76, 175, 80, 0.8);
+    background: rgba(20, 45, 25, 0.85);
+    color: #81c784;
+}
+
+.btn-tactical .hud-icon {
+    width: 28px;
+    height: 28px;
+}
+
+.badge-count {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    background: #ffd700;
+    color: #000000;
     font-size: 11px;
-    letter-spacing: 1px;
+    font-weight: 900;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
 }
 
+/* Mobility Stance Buttons */
+.btn-mobility {
+    width: 46px;
+    height: 46px;
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #cccccc;
+}
+
+.btn-mobility .hud-icon {
+    width: 24px;
+    height: 24px;
+}
+
+/* Powers (Freeze & Stride) */
 .btn-power {
     width: 54px;
     height: 54px;
-    border-color: rgba(255, 215, 0, 0.8);
-    background: rgba(40, 35, 10, 0.8);
+    border-color: rgba(255, 215, 0, 0.85);
+    background: rgba(45, 38, 12, 0.85);
     color: #ffd700;
-    font-size: 10px;
-    font-weight: 800;
-    text-align: center;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
     display: none; /* Revealed when unlocked */
 }
 
-/* WEAPON SELECTOR DECK (BOTTOM CENTER) */
+/* WEAPON SELECTOR DECK (BOTTOM CENTER - Strict Reference to Images 2, 3, 4) */
 .weapon-dock {
     position: absolute;
-    bottom: 16px;
+    bottom: 14px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    background: rgba(10, 14, 20, 0.85);
-    border: 1px solid rgba(0, 240, 255, 0.4);
+    background: rgba(8, 12, 18, 0.9);
+    border: 1px solid rgba(0, 240, 255, 0.5);
     border-radius: 8px;
-    padding: 4px;
+    padding: 3px;
     gap: 6px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.85);
 }
 
 .weapon-slot {
-    padding: 6px 14px;
-    background: rgba(20, 25, 35, 0.7);
+    padding: 4px 12px;
+    background: rgba(18, 24, 34, 0.75);
     border: 1px solid transparent;
     border-radius: 6px;
     cursor: pointer;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 8px;
+    transition: all 0.15s;
 }
 
 .weapon-slot.active {
     border-color: #00f0ff;
-    background: rgba(0, 240, 255, 0.15);
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    background: rgba(0, 240, 255, 0.18);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+}
+
+.weapon-icon-box {
+    width: 44px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.weapon-svg {
+    width: 100%;
+    height: 100%;
+    color: #ffffff;
+}
+
+.weapon-slot.active .weapon-svg {
+    color: #00f0ff;
+}
+
+.weapon-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 .weapon-name {
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 800;
     letter-spacing: 1px;
+    color: #ffffff;
 }
 
 .weapon-ammo {
     font-size: 10px;
+    font-weight: 700;
     color: #88c0d0;
 }
 

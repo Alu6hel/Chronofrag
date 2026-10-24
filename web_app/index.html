@@ -17,10 +17,17 @@
     <div id="hud-overlay">
         <!-- TOP BAR -->
         <div class="top-bar">
-            <!-- Minimap Radar & Health/Armor -->
+            <!-- Left: Architectural Minimap & Health/Armor Box -->
             <div class="player-status-group">
-                <div class="radar-wrapper">
-                    <canvas id="radar-canvas"></canvas>
+                <div class="minimap-container">
+                    <div class="minimap-quick-bar">
+                        <button id="btn-settings-toggle" class="mini-btn hud-interactive" title="Settings">⚙️</button>
+                        <button id="btn-sound-quick" class="mini-btn hud-interactive" title="Sound">🔊</button>
+                        <span class="minimap-label">SECTOR A</span>
+                    </div>
+                    <div class="radar-wrapper">
+                        <canvas id="radar-canvas"></canvas>
+                    </div>
                 </div>
                 <div class="health-armor-box">
                     <div class="bar-container">
@@ -29,24 +36,32 @@
                     </div>
                     <div class="bar-container">
                         <div id="hud-armor-bar" class="bar-fill-armor"></div>
-                        <span id="hud-armor-label" class="bar-label">100</span>
+                        <span id="hud-armor-label" class="bar-label">🛡️ 100</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Campaign Act & Objective Banner -->
-            <div class="act-info-banner">
-                <div id="hud-act-title" class="act-title">ACT 1: FROZEN ONSLAUGHT</div>
-                <div id="hud-act-objective" class="act-objective">SURVIVE THE TIME-STASIS CHAMBER</div>
-                <div id="hud-time-badge" class="time-dilation-badge">TIME: FROZEN [FIRE TO MOVE]</div>
+            <!-- Center: Match Status & Campaign Act Header -->
+            <div class="match-center-group">
+                <div class="team-score-bar">
+                    <div class="score-pill blue-team"><span id="hud-kills">0</span></div>
+                    <div class="match-timer" id="hud-match-timer">04:28</div>
+                    <div class="score-pill red-team"><span id="hud-enemy-score">12</span></div>
+                </div>
+                <div class="act-info-banner">
+                    <div id="hud-act-title" class="act-title">ACT 1: FROZEN ONSLAUGHT</div>
+                    <div id="hud-act-objective" class="act-objective">SURVIVE THE TIME-STASIS CHAMBER</div>
+                    <div id="hud-time-badge" class="time-dilation-badge">TIME: FROZEN [FIRE TO MOVE]</div>
+                </div>
             </div>
 
-            <!-- Score & Kill Counter -->
-            <div class="score-group">
-                <div class="stat-pill">KILLS: <span id="hud-kills">0</span></div>
-                <div class="stat-pill">SCORE: <span id="hud-score">0</span></div>
-                <div class="stat-pill">AMMO: <span id="hud-ammo">40 / 40</span></div>
-                <button id="btn-settings-toggle" class="btn-settings hud-interactive" title="Settings & Act Select">⚙️</button>
+            <!-- Right: Real-Time Kill Feed & Combat Stats -->
+            <div class="combat-status-group">
+                <div id="kill-feed" class="kill-feed-container"></div>
+                <div class="stat-pill-row">
+                    <div class="stat-pill">SCORE: <span id="hud-score">0</span></div>
+                    <div class="stat-pill">AMMO: <span id="hud-ammo">40 / 40</span></div>
+                </div>
             </div>
         </div>
 
@@ -64,44 +79,85 @@
         <div id="kinetic-alert">⚡ KINETIC SPEED BLOCK! MOVE SLOWER! ⚡</div>
 
         <!-- Touch Controls -->
-        <!-- Left Virtual Joystick -->
+        <!-- Left Virtual Joystick with Dual Rings -->
         <div id="joystick-zone" class="hud-interactive">
+            <div id="joystick-ring"></div>
             <div id="joystick-knob"></div>
         </div>
 
         <!-- Right Touch Look Zone -->
         <div id="look-zone" class="hud-interactive"></div>
 
-        <!-- Action Buttons (Bottom Right) -->
+        <!-- Right Tactical Action Cluster (Strict Reference to Images 2 & 3) -->
         <div class="action-cluster hud-interactive">
-            <div class="action-row">
+            <!-- Row 1: Tactical Throwables & Powers -->
+            <div class="action-row tactical-row">
                 <button id="btn-power-freeze" class="btn-hud btn-power" title="Manual Time Freeze">FREEZE</button>
                 <button id="btn-power-kinetic" class="btn-hud btn-power" title="Kinetic Stride">STRIDE</button>
-                <button id="btn-ads" class="btn-hud btn-ads" title="Aim Down Sights">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="2"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/></svg>
+                <button id="btn-grenade" class="btn-hud btn-tactical" title="Throw Chronal Grenade">
+                    <svg viewBox="0 0 24 24" class="hud-icon"><path fill="currentColor" d="M12 2a2 2 0 0 0-2 2v1H8a2 2 0 0 0-2 2v1a8 8 0 1 0 12 0V7a2 2 0 0 0-2-2h-2V4a2 2 0 0 0-2-2zm-1 8h2v2h-2v-2zm-3 3h2v2H8v-2zm6 0h2v2h-2v-2zm-3 3h2v2h-2v-2z"/></svg>
+                    <span id="hud-grenade-count" class="badge-count">2</span>
                 </button>
             </div>
-            <div class="action-row">
-                <button id="btn-reload" class="btn-hud btn-reload">RELOAD</button>
+
+            <!-- Row 2: Mobility Stance Buttons -->
+            <div class="action-row mobility-row">
+                <button id="btn-crouch" class="btn-hud btn-mobility" title="Crouch Stance">
+                    <svg viewBox="0 0 24 24" class="hud-icon"><path fill="currentColor" d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm2 7h-4v4h-2l2 7h2v-5h2v5h2l2-7h-2V9z"/></svg>
+                </button>
+                <button id="btn-jump" class="btn-hud btn-mobility" title="Jump">
+                    <svg viewBox="0 0 24 24" class="hud-icon"><path fill="currentColor" d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-1 6v5l-3 3 1.5 1.5 2.5-2.5V22h2v-7l2.5 2.5L18 16l-3-3V8h-4z"/></svg>
+                </button>
+                <button id="btn-ads" class="btn-hud btn-ads" title="Aim Down Sights">
+                    <svg viewBox="0 0 24 24" class="hud-icon"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="2"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/></svg>
+                </button>
+            </div>
+
+            <!-- Row 3: Primary Combat Buttons -->
+            <div class="action-row combat-row">
+                <button id="btn-reload" class="btn-hud btn-reload" title="Reload Weapon">
+                    <svg viewBox="0 0 24 24" class="hud-icon"><path fill="currentColor" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                </button>
                 <button id="btn-shoot" class="btn-hud btn-shoot" title="Fire Weapon">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                    <svg viewBox="0 0 24 24" class="hud-icon"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
                 </button>
             </div>
         </div>
 
-        <!-- Weapon Dock (Bottom Center) -->
+        <!-- Weapon Deck & Silhouette Card (Bottom Center - Strict Reference to Image 2, 3, 4) -->
         <div class="weapon-dock hud-interactive">
-            <div class="weapon-slot active" data-index="0">
-                <span class="weapon-name">DUAL PISTOLS</span>
-                <span class="weapon-ammo">40 / 40</span>
+            <div class="weapon-slot active" data-index="0" title="Dual Tactical Pistols">
+                <div class="weapon-icon-box">
+                    <svg viewBox="0 0 48 24" class="weapon-svg">
+                        <path fill="currentColor" d="M4 6h28v4h-4v4h-6v6h-6v-6H4V6zm28 2v2h12v-2H32z"/>
+                    </svg>
+                </div>
+                <div class="weapon-info">
+                    <span class="weapon-name">DUAL PISTOLS</span>
+                    <span class="weapon-ammo">40 / 0</span>
+                </div>
             </div>
-            <div class="weapon-slot" data-index="1">
-                <span class="weapon-name">NEON AK-CHRONO</span>
-                <span class="weapon-ammo">30 / 30</span>
+            <div class="weapon-slot" data-index="1" title="Neon AK-Chrono Assault Rifle">
+                <div class="weapon-icon-box">
+                    <svg viewBox="0 0 48 24" class="weapon-svg">
+                        <path fill="currentColor" d="M2 9h32v3h-6v2h-4v7h-5v-7h-8V9zm32 1v2h12v-2H34zm-14 5h4v5h-4v-5z"/>
+                    </svg>
+                </div>
+                <div class="weapon-info">
+                    <span class="weapon-name">NEON AK-CHRONO</span>
+                    <span class="weapon-ammo">30 / 120</span>
+                </div>
             </div>
-            <div class="weapon-slot" data-index="2">
-                <span class="weapon-name">HEAVY CANNON</span>
-                <span class="weapon-ammo">8 / 8</span>
+            <div class="weapon-slot" data-index="2" title="Heavy Energy Cannon">
+                <div class="weapon-icon-box">
+                    <svg viewBox="0 0 48 24" class="weapon-svg">
+                        <path fill="currentColor" d="M4 7h36v6h-8v5h-6v-5H4V7zm36 2v2h6v-2h-6z"/>
+                    </svg>
+                </div>
+                <div class="weapon-info">
+                    <span class="weapon-name">HEAVY CANNON</span>
+                    <span class="weapon-ammo">8 / 24</span>
+                </div>
             </div>
         </div>
 
