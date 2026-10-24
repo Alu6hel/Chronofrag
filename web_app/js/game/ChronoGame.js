@@ -31,20 +31,31 @@ class ChronoGame {
         this.isGrounded = true;
         this.cameraHeight = 1.7; // 1.7 standing, 0.95 crouching
 
-        // Time Dilation State
+        // Time Dilation & 6-Second Powers State
         this.isTimeFrozen = true;
         this.timeAdvanceTicks = 0;
         this.manualFreezeUnlocked = false;
         this.manualFreezeActive = false;
+        this.freezeTimer = 0;
+        this.freezeDuration = 6.0;
 
-        // Kinetic Trap State
+        // Kinetic Trap & 6-Second Stride State
         this.kineticTrapUnlocked = false;
-        this.kineticPowerActive = false;
+        this.strideActive = false;
+        this.strideTimer = 0;
+        this.strideDuration = 6.0;
         this.kineticBlockCooldown = 0;
 
-        // Dialogue State
+        // Dialogue & Comms State
         this.inDialogue = false;
         this.dialogueTriggered = false;
+        this.commsDismissTimeout = null;
+
+        // Animated Fortress Gates
+        this.gateLeftGroup = null;
+        this.gateRightGroup = null;
+        this.gateOpenAngle = 0;
+        this.gatesOpening = false;
 
         // Weapons Arsenal
         this.weapons = [
@@ -60,10 +71,13 @@ class ChronoGame {
         this.renderer = null;
         this.player = null;
 
-        // World Entities
+        // World Entities & Visual Polish
         this.monsters = [];
         this.projectiles = [];
         this.particles = [];
+        this.spentCasings = [];
+        this.pickups = [];
+        this.floatingCrystals = [];
         this.decorations = [];
         this.corridorLights = [];
         this.talkingMonster = null;
@@ -121,6 +135,10 @@ class ChronoGame {
         this.textures.kineticAlbedo = load("kinetic_albedo.png");
         this.textures.kineticNormal = load("kinetic_normal.png");
         this.textures.buggedSkin = load("bugged_skin.png");
+        this.textures.buntingPennants = load("bunting_pennants.png");
+        this.textures.breakerBox = load("electrical_breaker_box.png");
+        this.textures.exitSign = load("exit_sign_neon.png");
+        this.textures.anomalyCrystal = load("anomaly_crystal.png");
 
         // Set wrapping & repeats
         [this.textures.cobblestone, this.textures.cobblestoneNormal].forEach(t => {
@@ -244,32 +262,89 @@ class ChronoGame {
         archRib.position.set(0, 6.0, -24.5);
         this.scene.add(archRib);
 
-        // Heavy Ancient Wooden Fortress Double Doors with Iron Bands & Rivets (Image 3)
+        // Heavy Ancient Wooden Fortress Double Doors with Hinged Groups (Strict Reference to Image 3)
         const woodGateMat = new THREE.MeshStandardMaterial({
             map: this.textures.woodenGate,
             normalMap: this.textures.woodenGateNormal,
             roughness: 0.55,
             metalness: 0.4
         });
-        const gateLeft = new THREE.Mesh(new THREE.BoxGeometry(4.7, 6.0, 0.35), woodGateMat);
-        gateLeft.position.set(-2.4, 3.0, -24.8);
-        this.scene.add(gateLeft);
-
-        const gateRight = new THREE.Mesh(new THREE.BoxGeometry(4.7, 6.0, 0.35), woodGateMat);
-        gateRight.position.set(2.4, 3.0, -24.8);
-        this.scene.add(gateRight);
-
         const ironMat = new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.4, metalness: 0.9 });
-        [-2.4, 2.4].forEach(gx => {
-            [1.5, 3.2, 4.8].forEach(gy => {
-                const strap = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.22, 0.42), ironMat);
-                strap.position.set(gx, gy, -24.8);
-                this.scene.add(strap);
-            });
-            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.05, 8, 16), ironMat);
-            ring.position.set(gx > 0 ? 0.7 : -0.7, 2.8, -24.6);
-            this.scene.add(ring);
+
+        // Left Gate Group (Hinged at x = -4.75)
+        this.gateLeftGroup = new THREE.Group();
+        this.gateLeftGroup.position.set(-4.75, 3.0, -24.8);
+        const gateLeftMesh = new THREE.Mesh(new THREE.BoxGeometry(4.7, 6.0, 0.35), woodGateMat);
+        gateLeftMesh.position.set(2.35, 0, 0); // Origin at hinge
+        this.gateLeftGroup.add(gateLeftMesh);
+
+        [ -1.5, 0.2, 1.8 ].forEach(gy => {
+            const strap = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.22, 0.42), ironMat);
+            strap.position.set(2.35, gy, 0);
+            this.gateLeftGroup.add(strap);
         });
+        const ringLeft = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.05, 8, 16), ironMat);
+        ringLeft.position.set(4.0, -0.2, 0.2);
+        this.gateLeftGroup.add(ringLeft);
+        this.scene.add(this.gateLeftGroup);
+
+        // Right Gate Group (Hinged at x = 4.75)
+        this.gateRightGroup = new THREE.Group();
+        this.gateRightGroup.position.set(4.75, 3.0, -24.8);
+        const gateRightMesh = new THREE.Mesh(new THREE.BoxGeometry(4.7, 6.0, 0.35), woodGateMat);
+        gateRightMesh.position.set(-2.35, 0, 0); // Origin at hinge
+        this.gateRightGroup.add(gateRightMesh);
+
+        [ -1.5, 0.2, 1.8 ].forEach(gy => {
+            const strap = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.22, 0.42), ironMat);
+            strap.position.set(-2.35, gy, 0);
+            this.gateRightGroup.add(strap);
+        });
+        const ringRight = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.05, 8, 16), ironMat);
+        ringRight.position.set(-4.0, -0.2, 0.2);
+        this.gateRightGroup.add(ringRight);
+        this.scene.add(this.gateRightGroup);
+
+        // Courtyard Festive Hanging Bunting Pennants (Reference 1)
+        const buntingMat = new THREE.MeshStandardMaterial({
+            map: this.textures.buntingPennants,
+            transparent: true,
+            side: THREE.DoubleSide,
+            roughness: 0.75
+        });
+        const addBuntingLine = (x1, z1, x2, z2, y = 7.2) => {
+            const dx = x2 - x1;
+            const dz = z2 - z1;
+            const len = Math.hypot(dx, dz);
+            const angle = Math.atan2(dx, dz);
+            const bunting = new THREE.Mesh(new THREE.PlaneGeometry(len, 1.4), buntingMat);
+            bunting.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
+            bunting.rotation.y = angle + Math.PI / 2;
+            this.scene.add(bunting);
+            this.decorations.push(bunting);
+        };
+        addBuntingLine(-11, -10, 11, -10, 7.3);
+        addBuntingLine(-11, 10, 11, 10, 7.3);
+        addBuntingLine(-11, -10, -11, 10, 7.1);
+        addBuntingLine(11, -10, 11, 10, 7.1);
+        addBuntingLine(-5.5, -24, 5.5, -24, 6.6);
+
+        // Wrought Iron Lanterns with Warm Amber Flame Lights (Reference 1)
+        const lanternMat = new THREE.MeshStandardMaterial({ color: 0x111116, metalness: 0.9, roughness: 0.3 });
+        const lanternBulbMat = new THREE.MeshBasicMaterial({ color: 0xffaa44 });
+        const addCourtyardLantern = (x, y, z) => {
+            const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.7, 0.4), lanternMat);
+            lantern.position.set(x, y, z);
+            const bulb = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.35, 0.2), lanternBulbMat);
+            lantern.add(bulb);
+            const lampLight = new THREE.PointLight(0xffa834, 1.1, 10);
+            lantern.add(lampLight);
+            this.scene.add(lantern);
+        };
+        addCourtyardLantern(-5.2, 4.5, -24.0);
+        addCourtyardLantern(5.2, 4.5, -24.0);
+        addCourtyardLantern(-11, 4.8, -9.0);
+        addCourtyardLantern(11, 4.8, -9.0);
 
         // Courtyard Props: Cover Crates, Barrels, and Stone Columns
         const crateMat = new THREE.MeshStandardMaterial({ map: this.textures.woodenGate, roughness: 0.7 });
@@ -398,6 +473,37 @@ class ChronoGame {
         addBriefingBoard(5.3, -42, 0);
         addBriefingBoard(5.3, -65, 0);
 
+        // Illuminated Neon EXIT Signs (Strict Reference to Image 3)
+        const exitMat = new THREE.MeshBasicMaterial({ map: this.textures.exitSign, side: THREE.DoubleSide });
+        const addExitSign = (x, y, z, rotY = 0) => {
+            const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.8), exitMat);
+            sign.position.set(x, y, z);
+            sign.rotation.y = rotY;
+            const signGlow = new THREE.PointLight(0x00ff88, 1.2, 8);
+            signGlow.position.set(0, 0, 0.2);
+            sign.add(signGlow);
+            this.scene.add(sign);
+        };
+        addExitSign(0, 6.2, -25.6, Math.PI); // Facing courtyard
+        addExitSign(0, 6.2, -26.4, 0);       // Facing into corridor
+        addExitSign(0, 6.2, -84.2, 0);       // Above exit into Act 3
+
+        // Industrial Electrical Breaker Boxes on Concrete Pillars (Strict Reference to Image 3)
+        const breakerMat = new THREE.MeshStandardMaterial({
+            map: this.textures.breakerBox,
+            roughness: 0.45,
+            metalness: 0.65
+        });
+        const addBreakerBox = (x, y, z, rotY = 0) => {
+            const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.3), breakerMat);
+            box.position.set(x, y, z);
+            box.rotation.y = rotY;
+            this.scene.add(box);
+        };
+        addBreakerBox(-5.35, 3.2, -48, Math.PI / 2);
+        addBreakerBox(5.35, 3.2, -72, -Math.PI / 2);
+        addBreakerBox(-5.35, 3.2, -36, Math.PI / 2);
+
         const kineticGeo = new THREE.BoxGeometry(11.5, 7.0, 58);
         const kineticMat = new THREE.MeshBasicMaterial({
             map: this.textures.kineticAlbedo,
@@ -447,6 +553,37 @@ class ChronoGame {
                 this.scene.add(pGlow);
             });
         });
+
+        // Floating Chronal Crystalline Obelisks in Act 3 Endless Vault
+        const crystalMat = new THREE.MeshStandardMaterial({
+            map: this.textures.anomalyCrystal,
+            roughness: 0.15,
+            metalness: 0.85,
+            emissive: 0x00f0ff,
+            emissiveIntensity: 0.5
+        });
+        [-10, 10].forEach(cx => {
+            [-115, -140, -165].forEach(cz => {
+                const crystalGroup = new THREE.Group();
+                crystalGroup.position.set(cx, 3.8, cz);
+
+                const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(1.4, 0), crystalMat);
+                crystalGroup.add(crystal);
+
+                const orbitRing = new THREE.Mesh(new THREE.TorusGeometry(2.0, 0.06, 8, 24), new THREE.MeshBasicMaterial({ color: 0xaa44ff }));
+                orbitRing.rotation.x = Math.PI / 2;
+                crystalGroup.add(orbitRing);
+
+                const crystalLight = new THREE.PointLight(0x00f0ff, 1.4, 12);
+                crystalGroup.add(crystalLight);
+
+                this.scene.add(crystalGroup);
+                this.floatingCrystals.push(crystalGroup);
+            });
+        });
+
+        // Spawn Environmental Pickups (HP & Ammo)
+        this.initPickups();
     }
 
     createTacticalHandMesh(isLeft, pose = 'pistol') {
@@ -902,12 +1039,17 @@ class ChronoGame {
     }
 
     setupUIEvents() {
-        const dialogueBtn = document.getElementById('dialogue-btn-proceed');
-        if (dialogueBtn) {
-            dialogueBtn.addEventListener('click', () => this.advanceFromDialogue());
-            dialogueBtn.addEventListener('touchstart', (e) => {
+        const commsDismissBtn = document.getElementById('comms-btn-dismiss');
+        if (commsDismissBtn) {
+            const dismissComms = () => {
+                const comms = document.getElementById('comms-transmission');
+                if (comms) comms.style.display = 'none';
+                if (this.commsDismissTimeout) clearTimeout(this.commsDismissTimeout);
+            };
+            commsDismissBtn.addEventListener('click', dismissComms);
+            commsDismissBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                this.advanceFromDialogue();
+                dismissComms();
             }, { passive: false });
         }
 
@@ -974,8 +1116,9 @@ class ChronoGame {
         this.dialogueTriggered = false;
         this.talkingMonster = null;
         this.inDialogue = false;
-        const dialogueModal = document.getElementById('dialogue-modal');
-        if (dialogueModal) dialogueModal.style.display = 'none';
+
+        const comms = document.getElementById('comms-transmission');
+        if (comms) comms.style.display = 'none';
 
         const freezeBtn = document.getElementById('btn-power-freeze');
         const kineticBtn = document.getElementById('btn-power-kinetic');
@@ -984,6 +1127,10 @@ class ChronoGame {
             this.player.position.set(0, 0, 8);
             this.manualFreezeUnlocked = false;
             this.kineticTrapUnlocked = false;
+            this.gatesOpening = false;
+            this.gateOpenAngle = 0;
+            if (this.gateLeftGroup) this.gateLeftGroup.rotation.y = 0;
+            if (this.gateRightGroup) this.gateRightGroup.rotation.y = 0;
             if (freezeBtn) freezeBtn.style.display = 'none';
             if (kineticBtn) kineticBtn.style.display = 'none';
             this.updateActBanner("ACT 1: FROZEN ONSLAUGHT", "SURVIVE THE TIME-STASIS CHAMBER");
@@ -992,6 +1139,10 @@ class ChronoGame {
             this.player.position.set(0, 0, -32);
             this.manualFreezeUnlocked = true;
             this.kineticTrapUnlocked = false;
+            this.gatesOpening = true;
+            this.gateOpenAngle = Math.PI * 0.48;
+            if (this.gateLeftGroup) this.gateLeftGroup.rotation.y = -this.gateOpenAngle;
+            if (this.gateRightGroup) this.gateRightGroup.rotation.y = this.gateOpenAngle;
             if (freezeBtn) freezeBtn.style.display = 'flex';
             if (kineticBtn) kineticBtn.style.display = 'none';
             this.updateActBanner("ACT 2: THE KINETIC TRAP", "NAVIGATE THE CORRIDOR IN SLOW MOTION");
@@ -999,6 +1150,10 @@ class ChronoGame {
             this.player.position.set(0, 0, -125);
             this.manualFreezeUnlocked = true;
             this.kineticTrapUnlocked = true;
+            this.gatesOpening = true;
+            this.gateOpenAngle = Math.PI * 0.48;
+            if (this.gateLeftGroup) this.gateLeftGroup.rotation.y = -this.gateOpenAngle;
+            if (this.gateRightGroup) this.gateRightGroup.rotation.y = this.gateOpenAngle;
             if (freezeBtn) freezeBtn.style.display = 'flex';
             if (kineticBtn) kineticBtn.style.display = 'flex';
             this.updateActBanner("ACT 3: THE BUGGED", "SURVIVE THE ENDLESS GLITCHED SWARM");
@@ -1017,8 +1172,8 @@ class ChronoGame {
     }
 
     advanceFromDialogue() {
-        const modal = document.getElementById('dialogue-modal');
-        if (modal) modal.style.display = 'none';
+        const comms = document.getElementById('comms-transmission');
+        if (comms) comms.style.display = 'none';
         this.inDialogue = false;
 
         this.manualFreezeUnlocked = true;
@@ -1026,14 +1181,11 @@ class ChronoGame {
         if (freezeBtn) freezeBtn.style.display = 'flex';
 
         this.audio.playPowerChime();
-        this.showNotification("UNLOCKED: MANUAL TIME-FREEZE! (Tap [FREEZE] to activate)");
+        this.showNotification("UNLOCKED: MANUAL TIME-FREEZE [TAP FREEZE / KEY F]");
 
+        this.gatesOpening = true;
         this.currentAct = 2;
-        this.player.position.set(0, 0, -32);
         this.updateActBanner("ACT 2: THE KINETIC TRAP", "NAVIGATE THE CORRIDOR IN SLOW MOTION");
-
-        this.monsters.forEach(m => this.scene.remove(m));
-        this.monsters = [];
     }
 
     updateActBanner(title, objective) {
@@ -1092,11 +1244,34 @@ class ChronoGame {
         }
 
         this.handlePlayerMovement(delta);
-        this.updateMonsters(delta, timeAdvances);
-        this.updateProjectiles(delta, timeAdvances);
-        this.updateParticles(delta, timeAdvances);
+
+        // Stride slows down world to 0.25x slow-motion, Time Freeze freezes world completely
+        const worldDelta = this.strideActive ? (delta * 0.25) : delta;
+        const monstersCanMove = timeAdvances && !this.manualFreezeActive;
+        const worldPhysicsAdvance = !this.manualFreezeActive;
+
+        this.updateMonsters(worldDelta, monstersCanMove);
+        this.updateProjectiles(worldDelta, worldPhysicsAdvance);
+        this.updateParticles(worldDelta, worldPhysicsAdvance);
+        this.updateSpentCasings(delta);
+        this.updatePickups(delta);
         this.checkActObjectives();
         this.drawMinimapRadar();
+
+        // Animate Wooden Fortress Gates Swinging Open smoothly
+        if (this.gatesOpening && this.gateOpenAngle < Math.PI * 0.48) {
+            this.gateOpenAngle = Math.min(Math.PI * 0.48, this.gateOpenAngle + delta * 1.4);
+            if (this.gateLeftGroup) this.gateLeftGroup.rotation.y = -this.gateOpenAngle;
+            if (this.gateRightGroup) this.gateRightGroup.rotation.y = this.gateOpenAngle;
+        }
+
+        // Floating Crystals Orbit & Bob in Act 3
+        if (this.floatingCrystals) {
+            this.floatingCrystals.forEach((c, idx) => {
+                c.rotation.y += 0.015 * (idx % 2 === 0 ? 1 : -1);
+                c.position.y = 3.8 + Math.sin(now * 0.002 + idx) * 0.35;
+            });
+        }
 
         if (this.kineticCoreMesh) {
             this.kineticCoreMesh.rotation.y += 0.02;
@@ -1118,7 +1293,10 @@ class ChronoGame {
         this.player.rotation.y = this.playerYaw;
         this.camera.rotation.x = this.playerPitch;
 
-        const targetFOV = this.input.isADS ? 42 : 75;
+        // Dynamic FOV: Zoom in on ADS (42 deg), expand on Kinetic Stride (+8 deg hyper-speed sensation)
+        let targetFOV = this.input.isADS ? 42 : 75;
+        if (this.strideActive) targetFOV += 8;
+
         this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFOV, 0.22);
         this.camera.updateProjectionMatrix();
 
@@ -1131,6 +1309,11 @@ class ChronoGame {
         if (this.inDialogue) return;
         const m = this.input.getMovement();
         let targetSpeed = m.magnitude * (this.input.isCrouching ? 0.07 : 0.14);
+
+        // Kinetic Stride grants 2.2x hyper-velocity
+        if (this.strideActive) {
+            targetSpeed *= 2.2;
+        }
 
         if (this.input.wantsJump && this.isGrounded) {
             this.input.wantsJump = false;
@@ -1148,8 +1331,9 @@ class ChronoGame {
             }
         }
 
+        // In Act 2 Kinetic Trap: Stride grants full immunity; normal speed triggers non-Newtonian dampener block
         if (this.currentAct === 2 && this.player.position.z < -25 && this.player.position.z > -85) {
-            if (!this.kineticPowerActive) {
+            if (!this.strideActive) {
                 const checkedSpeed = AluLogicBridge.calculateKineticVelocity(targetSpeed, 0.055);
                 if (checkedSpeed === 0 && targetSpeed > 0.055) {
                     this.triggerKineticSpeedBlock();
@@ -1208,6 +1392,7 @@ class ChronoGame {
         const wepType = wepIndex === 2 ? "cannon" : wepIndex === 0 ? "pistol" : "rifle";
         this.audio.playGunshot(wepType);
         this.audio.playTimeWarp();
+        this.ejectCasing(wepType);
 
         this.muzzleLight.intensity = 3.0;
         setTimeout(() => { this.muzzleLight.intensity = 0; }, 50);
@@ -1414,28 +1599,59 @@ class ChronoGame {
     }
 
     initiateSatiricalDialogue(monster) {
-        this.inDialogue = true;
         this.dialogueTriggered = true;
         this.talkingMonster = monster;
 
         this.audio.playMonsterSpeech();
 
+        // Monster visually enters peaceful stasis ally state with green glow
         monster.children.forEach(c => {
-            if (c.material) c.material.color.setHex(0x00ff88);
+            if (c.material) {
+                c.material.color.setHex(0x00ff88);
+                if (c.material.emissive) c.material.emissive.setHex(0x003322);
+            }
         });
 
-        const dialogueData = AluLogicBridge.getSatiricalDialogue(this.kills);
-        const modal = document.getElementById('dialogue-modal');
-        const titleEl = document.getElementById('dialogue-title');
-        const roastEl = document.getElementById('dialogue-roast');
-        const bodyEl = document.getElementById('dialogue-body');
+        // Add a friendly glowing halo ring above the monster's head
+        const halo = new THREE.Mesh(
+            new THREE.TorusGeometry(0.45, 0.05, 8, 24),
+            new THREE.MeshBasicMaterial({ color: 0x00ff88 })
+        );
+        halo.rotation.x = Math.PI / 2;
+        halo.position.set(0, 2.4, 0);
+        monster.add(halo);
 
-        if (modal) {
-            titleEl.textContent = dialogueData.title;
-            roastEl.textContent = `"${dialogueData.roast}"`;
-            bodyEl.textContent = dialogueData.text;
-            modal.style.display = 'flex';
+        // Fetch military sci-fi comms dialogue
+        const dialogueData = AluLogicBridge.getSatiricalDialogue(this.kills);
+        const comms = document.getElementById('comms-transmission');
+        const commsSender = document.getElementById('comms-sender-callsign');
+        const commsRoast = document.getElementById('comms-roast');
+        const commsBody = document.getElementById('comms-body');
+
+        if (comms) {
+            if (commsSender) commsSender.textContent = dialogueData.title;
+            if (commsRoast) commsRoast.textContent = `"${dialogueData.roast}"`;
+            if (commsBody) commsBody.textContent = dialogueData.text;
+            comms.style.display = 'flex';
+
+            // Auto-dismiss after 10 seconds if not dismissed by tap
+            if (this.commsDismissTimeout) clearTimeout(this.commsDismissTimeout);
+            this.commsDismissTimeout = setTimeout(() => {
+                if (comms) comms.style.display = 'none';
+            }, 10000);
         }
+
+        // Seamlessly unlock and swing open the courtyard fortress double doors
+        this.gatesOpening = true;
+        this.audio.playPowerChime();
+
+        // Unlock Manual Time-Freeze power on tactical HUD
+        this.manualFreezeUnlocked = true;
+        const freezeBtn = document.getElementById('btn-power-freeze');
+        if (freezeBtn) freezeBtn.style.display = 'flex';
+
+        this.updateActBanner("ACT 1 // GATE UNLOCKED", "PROCEED THROUGH FORTRESS GATE TO SECTOR 2 FACILITY");
+        this.showNotification("CHRONO STASIS CORE SYNCED! TAP [FREEZE] OR PRESS [F] FOR 6s TIME STOP");
     }
 
     damageMonster(monster, damage, hitPoint) {
@@ -1514,19 +1730,230 @@ class ChronoGame {
     }
 
     handlePowers(delta) {
+        const freezeBtn = document.getElementById('btn-power-freeze');
+        const kineticBtn = document.getElementById('btn-power-kinetic');
+        const freezeVignette = document.getElementById('chrono-freeze-vignette');
+        const strideVignette = document.getElementById('kinetic-stride-vignette');
+
+        // Trigger Time Freeze (6.0-second duration)
         if (this.input.wantsTimeFreeze && this.manualFreezeUnlocked) {
             this.input.wantsTimeFreeze = false;
-            this.manualFreezeActive = !this.manualFreezeActive;
-            this.audio.playTimeWarp();
-            this.showNotification(this.manualFreezeActive ? "CHRONO STASIS: ACTIVE" : "CHRONO STASIS: RELEASED");
+            if (this.freezeTimer <= 0) {
+                this.freezeTimer = this.freezeDuration;
+                this.manualFreezeActive = true;
+                this.audio.playTimeWarp();
+                this.showNotification("CHRONO-STASIS ENGAGED: WORLD FROZEN FOR 6.0 SECONDS!");
+                if (freezeBtn) freezeBtn.classList.add('power-active');
+                if (freezeVignette) freezeVignette.classList.add('active');
+            } else {
+                this.freezeTimer = 0;
+            }
         }
 
+        // Active Time Freeze countdown
+        if (this.freezeTimer > 0) {
+            this.freezeTimer = Math.max(0, this.freezeTimer - delta);
+            if (freezeBtn) {
+                freezeBtn.textContent = `FREEZE (${this.freezeTimer.toFixed(1)}s)`;
+            }
+            const timeBadge = document.getElementById('hud-time-badge');
+            if (timeBadge) {
+                timeBadge.textContent = `CHRONO STASIS [${this.freezeTimer.toFixed(1)}s ACTIVE]`;
+                timeBadge.classList.add('pulsing');
+            }
+            if (this.freezeTimer <= 0) {
+                this.manualFreezeActive = false;
+                if (freezeBtn) {
+                    freezeBtn.classList.remove('power-active');
+                    freezeBtn.textContent = "FREEZE";
+                }
+                if (freezeVignette) freezeVignette.classList.remove('active');
+                this.audio.playPowerChime();
+                this.showNotification("CHRONO-STASIS DEPLETED: NORMAL TIMELINE RESTORED");
+            }
+        }
+
+        // Trigger Kinetic Stride (6.0-second duration, 2.2x speed, 0.25x world slowmo)
         if (this.input.wantsKineticPower && this.kineticTrapUnlocked) {
             this.input.wantsKineticPower = false;
-            this.kineticPowerActive = true;
-            this.audio.playPowerChime();
-            this.showNotification("KINETIC DAMPENER: HYPER-VELOCITY ENGAGED!");
-            setTimeout(() => { this.kineticPowerActive = false; }, 6000);
+            if (this.strideTimer <= 0) {
+                this.strideTimer = this.strideDuration;
+                this.strideActive = true;
+                this.audio.playPowerChime();
+                this.showNotification("KINETIC STRIDE ENGAGED: 2.2x HYPER-SPEED (6.0s)!");
+                if (kineticBtn) kineticBtn.classList.add('power-active');
+                if (strideVignette) strideVignette.classList.add('active');
+            } else {
+                this.strideTimer = 0;
+            }
+        }
+
+        // Active Kinetic Stride countdown
+        if (this.strideTimer > 0) {
+            this.strideTimer = Math.max(0, this.strideTimer - delta);
+            if (kineticBtn) {
+                kineticBtn.textContent = `STRIDE (${this.strideTimer.toFixed(1)}s)`;
+            }
+            if (this.strideTimer <= 0) {
+                this.strideActive = false;
+                if (kineticBtn) {
+                    kineticBtn.classList.remove('power-active');
+                    kineticBtn.textContent = "STRIDE";
+                }
+                if (strideVignette) strideVignette.classList.remove('active');
+                this.showNotification("KINETIC STRIDE DEPLETED");
+            }
+        }
+    }
+
+    initPickups() {
+        this.pickups = [];
+        const pickupConfigs = [
+            { type: 'health', pos: new THREE.Vector3(-6, 0.6, -12) },
+            { type: 'ammo', pos: new THREE.Vector3(8, 0.6, -8) },
+            { type: 'health', pos: new THREE.Vector3(4, 0.6, -45) },
+            { type: 'ammo', pos: new THREE.Vector3(-4, 0.6, -65) },
+            { type: 'ammo', pos: new THREE.Vector3(0, 0.6, -135) }
+        ];
+
+        pickupConfigs.forEach(cfg => {
+            const group = new THREE.Group();
+            group.position.copy(cfg.pos);
+
+            if (cfg.type === 'health') {
+                const boxMat = new THREE.MeshStandardMaterial({ color: 0x00ff88, roughness: 0.3, emissive: 0x004422 });
+                const baseBox = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), boxMat);
+                group.add(baseBox);
+
+                const crossMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.52), crossMat);
+                const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.35, 0.52), crossMat);
+                group.add(crossH);
+                group.add(crossV);
+
+                const pLight = new THREE.PointLight(0x00ff88, 0.8, 4);
+                group.add(pLight);
+            } else {
+                const ammoMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 });
+                const ammoCan = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.6), ammoMat);
+                group.add(ammoCan);
+
+                const pLight = new THREE.PointLight(0xffd700, 0.8, 4);
+                group.add(pLight);
+            }
+
+            this.scene.add(group);
+            this.pickups.push({
+                type: cfg.type,
+                mesh: group,
+                basePos: cfg.pos.clone(),
+                active: true,
+                respawnTimer: 0
+            });
+        });
+    }
+
+    updatePickups(delta) {
+        const playerPos = this.player.position;
+        this.pickups.forEach(p => {
+            if (!p.active) {
+                p.respawnTimer -= delta;
+                if (p.respawnTimer <= 0) {
+                    p.active = true;
+                    p.mesh.visible = true;
+                }
+                return;
+            }
+
+            p.mesh.rotation.y += 2.0 * delta;
+            p.mesh.position.y = p.basePos.y + Math.sin(performance.now() * 0.003) * 0.12;
+
+            const dist = playerPos.distanceTo(p.mesh.position);
+            if (dist < 1.8) {
+                p.active = false;
+                p.mesh.visible = false;
+                p.respawnTimer = 18.0;
+
+                this.audio.playPowerChime();
+                if (p.type === 'health') {
+                    this.health = Math.min(100, this.health + 40);
+                    this.armor = Math.min(100, this.armor + 25);
+                    const hpBar = document.getElementById('hud-hp-bar');
+                    const armorBar = document.getElementById('hud-armor-bar');
+                    const hpLabel = document.getElementById('hud-hp-label');
+                    const armorLabel = document.getElementById('hud-armor-label');
+                    if (hpBar) hpBar.style.width = `${this.health}%`;
+                    if (armorBar) armorBar.style.width = `${this.armor}%`;
+                    if (hpLabel) hpLabel.textContent = `+ ${this.health}`;
+                    if (armorLabel) armorLabel.textContent = `${this.armor}`;
+                    this.showNotification("OBTAINED: NANO-MEDKIT (+40 HP, +25 ARMOR)");
+                } else {
+                    this.weapons.forEach(w => { w.ammo = w.maxAmmo; });
+                    this.grenades = Math.min(4, this.grenades + 1);
+                    const badge = document.getElementById('hud-grenade-count');
+                    if (badge) badge.textContent = this.grenades;
+                    this.updateActiveWeaponView();
+                    this.showNotification("OBTAINED: AMMUNITION REFILL & GRENADE");
+                }
+            }
+        });
+    }
+
+    ejectCasing(wepType) {
+        if (wepType === "cannon") return;
+        const casingGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.055, 6);
+        const casingMat = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            metalness: 0.95,
+            roughness: 0.25
+        });
+        const casing = new THREE.Mesh(casingGeo, casingMat);
+
+        const spawnPos = new THREE.Vector3(0.22, -0.16, -0.42);
+        spawnPos.applyMatrix4(this.camera.matrixWorld);
+        casing.position.copy(spawnPos);
+
+        const rightDir = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+        const upDir = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
+        const forwardDir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+
+        const vel = rightDir.multiplyScalar(2.2 + Math.random() * 0.8)
+            .add(upDir.multiplyScalar(1.2 + Math.random() * 0.6))
+            .add(forwardDir.multiplyScalar(-0.6 - Math.random() * 0.3));
+
+        casing.velocity = vel;
+        casing.rotationSpeed = new THREE.Vector3(
+            (Math.random() - 0.5) * 18,
+            (Math.random() - 0.5) * 18,
+            (Math.random() - 0.5) * 18
+        );
+        casing.life = 1.4;
+
+        this.scene.add(casing);
+        this.spentCasings.push(casing);
+    }
+
+    updateSpentCasings(delta) {
+        for (let i = this.spentCasings.length - 1; i >= 0; i--) {
+            const c = this.spentCasings[i];
+            c.position.addScaledVector(c.velocity, delta);
+            c.velocity.y -= 9.8 * delta;
+            c.rotation.x += c.rotationSpeed.x * delta;
+            c.rotation.y += c.rotationSpeed.y * delta;
+            c.rotation.z += c.rotationSpeed.z * delta;
+
+            if (c.position.y <= 0.03) {
+                c.position.y = 0.03;
+                c.velocity.y = -c.velocity.y * 0.35;
+                c.velocity.x *= 0.65;
+                c.velocity.z *= 0.65;
+            }
+
+            c.life -= delta;
+            if (c.life <= 0) {
+                this.scene.remove(c);
+                this.spentCasings.splice(i, 1);
+            }
         }
     }
 
@@ -1595,6 +2022,16 @@ class ChronoGame {
     }
 
     checkActObjectives() {
+        // Seamless transition from Act 1 Courtyard through opened wooden fortress doors into Sector 2
+        if (this.currentAct === 1 && this.gatesOpening && this.player.position.z < -25.5) {
+            this.currentAct = 2;
+            this.updateActBanner("ACT 2: THE KINETIC TRAP", "NAVIGATE THE CORRIDOR IN SLOW MOTION");
+            this.showNotification("ENTERED SECTOR 2: KINETIC FIELD DETECTED");
+            this.monsters.forEach(m => this.scene.remove(m));
+            this.monsters = [];
+        }
+
+        // Sector 2 Kinetic Core Retrieval
         if (this.currentAct === 2) {
             const distToCore = this.player.position.distanceTo(this.kineticCoreMesh.position);
             if (distToCore < 3.5) {
@@ -1603,10 +2040,17 @@ class ChronoGame {
                 if (kineticBtn) kineticBtn.style.display = 'flex';
 
                 this.audio.playPowerChime();
-                this.showNotification("OBTAINED: KINETIC DAMPENER POWER!");
+                this.showNotification("OBTAINED: KINETIC STRIDE POWER! [TAP STRIDE / PRESS E]");
 
                 this.currentAct = 3;
-                this.player.position.set(0, 0, -115);
+                this.updateActBanner("ACT 3: THE BUGGED", "SURVIVE THE ENDLESS GLITCHED SWARM");
+                this.spawnAct3BuggedSwarm();
+            } else if (this.player.position.z < -86) {
+                // Walked past neon EXIT sign directly into Act 3 Endless Vault
+                this.currentAct = 3;
+                this.kineticTrapUnlocked = true;
+                const kineticBtn = document.getElementById('btn-power-kinetic');
+                if (kineticBtn) kineticBtn.style.display = 'flex';
                 this.updateActBanner("ACT 3: THE BUGGED", "SURVIVE THE ENDLESS GLITCHED SWARM");
                 this.spawnAct3BuggedSwarm();
             }

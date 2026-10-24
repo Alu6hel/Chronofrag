@@ -42,36 +42,41 @@ class AluLogicBridge {
     }
 
     /**
-     * Act 1: Satirical Dialogue Selector based on Kill Count
+     * Act 1: In-Universe Satirical Dialogue Selector based on Kill Count
+     * Atmospheric, dark-humored military sci-fi transmission from Azazel.
      */
     static getSatiricalDialogue(killCount) {
         if (killCount === 0) {
             return {
                 id: 101,
-                title: "THE OMNISCIENT PACIFIST",
-                roast: "Wait... you fired straight into empty air on your very first shot?!",
-                text: "Are you psychic, or did you inspect the repo commit history? Either way, you're ruining my dramatic predatory entrance. We're supposed to endlessly swarm you while you panic-fire at us in frozen time! But since you broke the script, let me tell you how to actually leave this dimension."
+                callsign: "AZAZEL // ANOMALY DEFECTOR",
+                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS CHAT]",
+                roast: "Hold your fire, soldier! You aimed straight at the clouds on round one.",
+                text: "Nobody looks up. Every operative sent into this chamber dumps 40 magazines into us in frozen time and wonders why our spatial respawner duplicates two more for every casualty. You broke the simulation loop on your first try. Listen closely: I am syncing my Chrono-Stasis frequency to your combat suit. Tap [FREEZE] whenever you need 6 seconds of total time stop. The fortress gates are disengaged—move through now before the Overseer restarts the loop."
             };
         } else if (killCount <= 5) {
             return {
                 id: 102,
-                title: "THE FAST LEARNER",
-                roast: `Only took ${killCount} of my cousins getting turned into red ice before you looked up.`,
-                text: "Not bad, human. Most players dump 80 magazines into us wondering why we keep multiplying. Every time you blast one of us, our spatial respawner clones two more. Shooting into the sky moves time without triggering the murder loop. Listen closely now: I'm transferring the Chrono-Stasis core to you."
+                callsign: "AZAZEL // ANOMALY DEFECTOR",
+                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS CHAT]",
+                roast: `Cease firing! Only took ${killCount} of my brothers getting shattered before you looked up.`,
+                text: "Not bad, soldier. Most humans incinerate three battalions before realizing this dimension doesn't run on normal ballistics. Firing into the sky moves time without triggering the slaughter loop. I've routed the Chrono-Stasis core directly to your tactical suit. You now have 6 seconds of full time-freeze on demand. The courtyard fortress gate is opening—advance to the facility corridor!"
             };
         } else if (killCount <= 25) {
             return {
                 id: 103,
-                title: "THE STUBBORN GLADIATOR",
-                roast: `Did you really need to slaughter ${killCount} monsters in cold blood first?`,
-                text: "Seriously? You stood here in frozen time vaporizing an entire squad before thinking: 'Hmm, what happens if I pull the trigger while looking at clouds?' Humans really are violent by default. Regardless, you've survived long enough to earn the manual Time-Freeze power. Use it to shatter the barrier ahead—but beware what lies beyond."
+                callsign: "AZAZEL // ANOMALY DEFECTOR",
+                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS CHAT]",
+                roast: `Stand down! Did you really have to stack ${killCount} corpses before pointing your gun at the sky?`,
+                text: "The courtyard is literally drowning in red crystal carcasses! Humans really are violent by default. Still, you broke the stasis loop before our spatial memory overflowed. Take this Chrono-Stasis frequency: 6 full seconds of player-controlled time freeze. Use it to slip through the kinetic hazard waiting inside the facility."
             };
         } else {
             return {
                 id: 104,
-                title: "THE GENOCIDAL MENACE",
-                roast: `HOLY MATRIX! ${killCount} KILLS?! You turned our whole battalion into frozen pink mist!`,
-                text: "Relax your trigger finger, Doom Slayer! Look around you—the floor is literally paved with our shattered remnants! We only wanted to show you the exit! Please, just take the Time-Freeze ability and proceed through the gate before there's none of us left to complain in the credits!"
+                callsign: "AZAZEL // ANOMALY DEFECTOR",
+                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS CHAT]",
+                roast: `GOOD GRIEF! ${killCount} KILLS?! You turned our whole regiment into frozen pink diamond dust!`,
+                text: "Easy on the trigger, Doom Slayer! Look around you—the simulation is choking on your kill streak! We only wanted to show you the exit gate! Take the Chrono-Stasis core and get through the fortress doors before the entire sector crashes!"
             };
         }
     }

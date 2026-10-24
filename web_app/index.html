@@ -13,6 +13,8 @@
     </div>
 
     <div class="crt-overlay"></div>
+    <div id="chrono-freeze-vignette" class="power-vignette-freeze"></div>
+    <div id="kinetic-stride-vignette" class="power-vignette-stride"></div>
 
     <div id="hud-overlay">
         <!-- TOP BAR -->
@@ -161,21 +163,41 @@
             </div>
         </div>
 
-        <!-- Satirical Monster Dialogue Modal -->
-        <div id="dialogue-modal" class="hud-interactive">
-            <div class="dialogue-header">
-                <div class="dialogue-avatar">👹</div>
-                <div>
-                    <div id="dialogue-title" class="dialogue-speaker">CHRONO-FIEND VANGUARD</div>
-                    <div class="dialogue-tagline">Sentient Spatial Anomaly Resident</div>
+        <!-- In-World Tactical Comms HUD Transmission (Seamless Radio Comm) -->
+        <div id="comms-transmission" class="comms-panel">
+            <div class="comms-header">
+                <div class="comms-avatar-container">
+                    <div class="comms-avatar-ring"></div>
+                    <div class="comms-avatar-icon">📻</div>
+                    <span class="comms-live-dot"></span>
+                </div>
+                <div class="comms-meta">
+                    <div class="comms-sender-row">
+                        <span id="comms-sender-callsign" class="comms-callsign">AZAZEL // ANOMALY DEFECTOR</span>
+                        <span class="comms-frequency">[FREQ: 142.8 MHz]</span>
+                    </div>
+                    <div class="comms-status-row">
+                        <span class="comms-tag">TACTICAL COMMS OVERRIDE</span>
+                        <div class="comms-audio-visualizer">
+                            <span class="eq-bar"></span>
+                            <span class="eq-bar"></span>
+                            <span class="eq-bar"></span>
+                            <span class="eq-bar"></span>
+                            <span class="eq-bar"></span>
+                            <span class="eq-bar"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div id="dialogue-roast" class="dialogue-roast">"Looking up? Finally."</div>
-            <div id="dialogue-body" class="dialogue-body">
-                Did you really just vaporize half our clan in frozen time before testing if aiming straight into the air advances time without shooting us?
+            <div class="comms-content">
+                <div id="comms-roast" class="comms-roast">"Cease fire! Cease fire! The skyward vector confirmed our frequency!"</div>
+                <div id="comms-body" class="comms-body">
+                    We've unlocked the courtyard fortress gate. Transmitting manual Chrono-Stasis core directly to your tactical rig. Walk through to Sector 2!
+                </div>
             </div>
-            <div class="dialogue-choices">
-                <button id="dialogue-btn-proceed" class="dialogue-btn">⚡ ACCEPT CHRONO-STASIS POWER & ADVANCE TO ACT 2</button>
+            <div class="comms-footer">
+                <div class="comms-pill-badge">GATE UNLOCKED // PROCEED TO SECTOR 2</div>
+                <button id="comms-btn-dismiss" class="comms-btn-action hud-interactive">DISMISS [TAP]</button>
             </div>
         </div>
 

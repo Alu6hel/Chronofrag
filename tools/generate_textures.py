@@ -475,6 +475,167 @@ def main():
             weapon_camo[idx + 3] = 255
     write_png(os.path.join(target_dir, "weapon_camo.png"), size, size, weapon_camo)
 
+
+    # 15. Bunting Pennants (Festive hanging flags for Courtyard - Reference 1)
+    bunting = bytearray(size * size * 4)
+    flag_colors = [
+        (220, 40, 40),    # Red
+        (240, 240, 240),  # White
+        (40, 180, 60),    # Green
+        (240, 200, 30),   # Yellow
+        (30, 140, 230)    # Blue
+    ]
+    for y in range(size):
+        for x in range(size):
+            idx = (y * size + x) * 4
+            # Draw top rope at y: 20 to 28
+            rope_y = int(24 + math.sin(x * 0.05) * 8)
+            if abs(y - rope_y) <= 3:
+                bunting[idx] = 40; bunting[idx+1] = 30; bunting[idx+2] = 25; bunting[idx+3] = 255
+                continue
+            
+            # Pennants hanging down from rope every 64 pixels
+            p_width = 56
+            p_idx = x // p_width
+            p_offset = x % p_width
+            color = flag_colors[p_idx % len(flag_colors)]
+            
+            # Triangle shape: starts at rope_y, widens to p_width, goes down 110px
+            triangle_height = 90
+            dy = y - rope_y
+            if 0 < dy <= triangle_height:
+                # Width at this dy shrinks to tip
+                allowed_half_w = (1.0 - (dy / triangle_height)) * (p_width / 2 - 2)
+                center_x = p_width / 2
+                if abs(p_offset - center_x) <= allowed_half_w:
+                    # Shading / fabric weave
+                    shade = 1.0 - (dy / triangle_height) * 0.2 + (math.sin(x * 0.4) * 0.05)
+                    bunting[idx] = int(min(255, color[0] * shade))
+                    bunting[idx+1] = int(min(255, color[1] * shade))
+                    bunting[idx+2] = int(min(255, color[2] * shade))
+                    bunting[idx+3] = 255
+                    continue
+            
+            # Empty background (Transparent)
+            bunting[idx] = 0; bunting[idx+1] = 0; bunting[idx+2] = 0; bunting[idx+3] = 0
+            
+    write_png(os.path.join(target_dir, "bunting_pennants.png"), size, size, bunting)
+
+    # 16. Electrical Breaker Box (Industrial Facility - Reference 3)
+    breaker = bytearray(size * size * 4)
+    breaker_height = [0.0] * (size * size)
+    for y in range(size):
+        for x in range(size):
+            idx = (y * size + x) * 4
+            # Metal cabinet casing (margins 32 to size-32)
+            if 32 <= x <= size - 32 and 32 <= y <= size - 32:
+                # Cabinet face
+                base = 180 + (x % 4) * 2
+                h = 0.6
+                # Outer bevel rim
+                if x < 48 or x > size - 48 or y < 48 or y > size - 48:
+                    base = 140
+                    h = 0.8
+                # Central seam between double doors
+                if abs(x - size // 2) <= 3:
+                    base = 50
+                    h = 0.2
+                # Handles / Latches
+                if (abs(x - (size // 2 - 16)) <= 6 or abs(x - (size // 2 + 16)) <= 6) and 230 <= y <= 270:
+                    base = 30
+                    h = 0.95
+                # Warning Yellow High Voltage Triangle
+                tri_top_y = 90
+                tri_h = 70
+                if tri_top_y <= y <= tri_top_y + tri_h:
+                    hw = (y - tri_top_y) * 0.6
+                    if abs(x - size // 2) <= hw:
+                        # Yellow triangle
+                        base_r, base_g, base_b = 240, 200, 20
+                        # Lightning bolt symbol in black inside triangle
+                        if abs(x - (size // 2 - 5 + (y - tri_top_y) * 0.15)) <= 5 and 110 <= y <= 150:
+                            base_r, base_g, base_b = 20, 20, 20
+                        breaker[idx] = base_r; breaker[idx+1] = base_g; breaker[idx+2] = base_b; breaker[idx+3] = 255
+                        breaker_height[y * size + x] = 0.7
+                        continue
+                
+                breaker[idx] = int(base * 0.9); breaker[idx+1] = int(base * 0.92); breaker[idx+2] = int(base * 0.95); breaker[idx+3] = 255
+                breaker_height[y * size + x] = h
+            else:
+                # Wall mounting frame
+                breaker[idx] = 90; breaker[idx+1] = 95; breaker[idx+2] = 105; breaker[idx+3] = 255
+                breaker_height[y * size + x] = 0.1
+    write_png(os.path.join(target_dir, "electrical_breaker_box.png"), size, size, breaker)
+
+    # 17. Exit Sign Neon (Glowing Emergency Exit - Reference 3)
+    exit_sign = bytearray(size * size * 4)
+    for y in range(size):
+        for x in range(size):
+            idx = (y * size + x) * 4
+            # Dark green acrylic frame
+            is_border = (x < 16 or x > size - 16 or y < 16 or y > size - 16)
+            if is_border:
+                exit_sign[idx] = 10; exit_sign[idx+1] = 70; exit_sign[idx+2] = 25; exit_sign[idx+3] = 255
+            else:
+                # Green luminous field
+                lum = 40 + int(math.sin(x * 0.05) * 8)
+                r, g, b = 0, 160 + lum, 60 + lum // 2
+                
+                # Letter E-X-I-T stencil patterns
+                # Simple legible block lettering in center
+                text_y = (180 <= y <= 330)
+                is_text = False
+                # E: x in 60..130
+                if 70 <= x <= 130 and text_y:
+                    if x <= 90 or y <= 215 or 245 <= y <= 265 or y >= 295:
+                        is_text = True
+                # X: x in 160..240
+                if 160 <= x <= 240 and text_y:
+                    rel_x = (x - 200) / 40.0
+                    rel_y = (y - 255) / 75.0
+                    if abs(abs(rel_x) - abs(rel_y)) <= 0.28:
+                        is_text = True
+                # I: x in 270..310
+                if 280 <= x <= 305 and text_y:
+                    is_text = True
+                # T: x in 340..420
+                if 340 <= x <= 420 and text_y:
+                    if y <= 215 or (370 <= x <= 390):
+                        is_text = True
+                
+                if is_text:
+                    r, g, b = 230, 255, 230 # Bright glowing white-green
+                    
+                exit_sign[idx] = r; exit_sign[idx+1] = g; exit_sign[idx+2] = b; exit_sign[idx+3] = 255
+    write_png(os.path.join(target_dir, "exit_sign_neon.png"), size, size, exit_sign)
+
+    # 18. Anomaly Crystal (Act 3 Endless Vault)
+    crystal = bytearray(size * size * 4)
+    crystal_height = [0.0] * (size * size)
+    for y in range(size):
+        for x in range(size):
+            idx = (y * size + x) * 4
+            # Hexagonal crystalline facets with glowing energy fissures
+            fx = (x % 64 - 32)
+            fy = (y % 64 - 32)
+            dist = math.sqrt(fx * fx + fy * fy)
+            facet = math.cos(dist * 0.2)
+            
+            # Energy vein fissures
+            vein = math.sin(x * 0.08 + math.cos(y * 0.08) * 3)
+            is_vein = abs(vein) < 0.15
+            
+            if is_vein:
+                crystal[idx] = 0; crystal[idx+1] = 240; crystal[idx+2] = 255; crystal[idx+3] = 255
+                crystal_height[y * size + x] = 0.9
+            else:
+                r = int(60 + facet * 30)
+                g = int(20 + facet * 15)
+                b = int(140 + facet * 80)
+                crystal[idx] = r; crystal[idx+1] = g; crystal[idx+2] = b; crystal[idx+3] = 255
+                crystal_height[y * size + x] = 0.4 + facet * 0.3
+    write_png(os.path.join(target_dir, "anomaly_crystal.png"), size, size, crystal)
+
     print("\nAll Chronofrag advanced procedural PBR textures synthesized successfully!")
 
 if __name__ == "__main__":
