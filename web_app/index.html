@@ -46,6 +46,7 @@
                 <div class="stat-pill">KILLS: <span id="hud-kills">0</span></div>
                 <div class="stat-pill">SCORE: <span id="hud-score">0</span></div>
                 <div class="stat-pill">AMMO: <span id="hud-ammo">40 / 40</span></div>
+                <button id="btn-settings-toggle" class="btn-settings hud-interactive" title="Settings & Act Select">⚙️</button>
             </div>
         </div>
 
@@ -119,6 +120,36 @@
             </div>
             <div class="dialogue-choices">
                 <button id="dialogue-btn-proceed" class="dialogue-btn">⚡ ACCEPT CHRONO-STASIS POWER & ADVANCE TO ACT 2</button>
+            </div>
+        </div>
+
+        <!-- Game Settings & Act Select Modal -->
+        <div id="settings-modal" class="hud-interactive" style="display: none;">
+            <div class="settings-header">
+                <h2>CHRONOFRAG CONFIGURATION</h2>
+                <button id="btn-settings-close" class="btn-close">✕</button>
+            </div>
+            <div class="settings-section">
+                <h3>CAMPAIGN WARP (ACT SELECTOR)</h3>
+                <div class="act-selector-row">
+                    <button class="btn-act-warp" data-act="1">ACT 1: FROZEN STASIS</button>
+                    <button class="btn-act-warp" data-act="2">ACT 2: KINETIC TRAP</button>
+                    <button class="btn-act-warp" data-act="3">ACT 3: THE BUGGED</button>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>CONTROLS & AUDIO</h3>
+                <div class="setting-item">
+                    <span>LOOK SENSITIVITY</span>
+                    <input type="range" id="setting-sensitivity" min="0.001" max="0.005" step="0.0005" value="0.0022">
+                </div>
+                <div class="setting-item">
+                    <span>AUDIO SYNTHESIZER</span>
+                    <button id="btn-toggle-audio" class="btn-toggle">MUTED</button>
+                </div>
+            </div>
+            <div class="settings-footer">
+                <button id="btn-restart-game" class="btn-restart">RESTART RUN</button>
             </div>
         </div>
     </div>

@@ -547,3 +547,143 @@ html, body {
     30% { transform: translate(-50%, -85%) scale(1.2); }
     100% { opacity: 0; transform: translate(-50%, -135%) scale(1.0); }
 }
+
+/* --- SETTINGS BUTTON & MODAL --- */
+.btn-settings {
+    background: rgba(10, 15, 20, 0.85);
+    border: 1px solid rgba(0, 240, 255, 0.4);
+    color: #00f0ff;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-settings:hover, .btn-settings:active {
+    background: rgba(0, 240, 255, 0.2);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+#settings-modal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 480px;
+    background: rgba(10, 16, 26, 0.95);
+    border: 2px solid #00f0ff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 0 35px rgba(0, 240, 255, 0.35);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    backdrop-filter: blur(8px);
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.3);
+    padding-bottom: 10px;
+}
+
+.settings-header h2 {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    letter-spacing: 2px;
+    color: #00f0ff;
+}
+
+.btn-close {
+    background: transparent;
+    border: none;
+    color: #ff3344;
+    font-size: 20px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.settings-section h3 {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: #ffd700;
+    margin-bottom: 8px;
+}
+
+.act-selector-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-act-warp {
+    flex: 1;
+    min-width: 120px;
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid rgba(0, 240, 255, 0.4);
+    color: #ffffff;
+    padding: 8px 6px;
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Share Tech Mono', monospace;
+    text-align: center;
+}
+
+.btn-act-warp:hover, .btn-act-warp:active {
+    background: rgba(0, 240, 255, 0.35);
+    border-color: #00f0ff;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 12px;
+    color: #cccccc;
+}
+
+.setting-item input[type="range"] {
+    accent-color: #00f0ff;
+    cursor: pointer;
+}
+
+.btn-toggle {
+    background: rgba(0, 255, 136, 0.2);
+    border: 1px solid #00ff88;
+    color: #00ff88;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.btn-toggle.disabled {
+    background: rgba(255, 51, 68, 0.2);
+    border-color: #ff3344;
+    color: #ff3344;
+}
+
+.settings-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.btn-restart {
+    background: rgba(255, 51, 68, 0.2);
+    border: 1px solid #ff3344;
+    color: #ff3344;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+}

@@ -7,6 +7,11 @@ class ChronoAudioSystem {
     constructor() {
         this.ctx = null;
         this.initialized = false;
+        this.isMuted = false;
+    }
+
+    setMuted(muted) {
+        this.isMuted = muted;
     }
 
     init() {
@@ -25,12 +30,12 @@ class ChronoAudioSystem {
         if (this.ctx && this.ctx.state === 'suspended') {
             this.ctx.resume();
         }
+        return (this.ctx && !this.isMuted);
     }
 
     // Gunshot: Punchy transient + noise burst + metallic decay
     playGunshot(weaponType = "rifle") {
-        this.ensureContext();
-        if (!this.ctx) return;
+        if (!this.ensureContext()) return;
 
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();

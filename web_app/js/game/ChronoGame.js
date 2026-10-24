@@ -418,6 +418,115 @@ class ChronoGame {
                 this.advanceFromDialogue();
             }, { passive: false });
         }
+
+        // Settings Modal Toggle
+        const btnSettings = document.getElementById('btn-settings-toggle');
+        const settingsModal = document.getElementById('settings-modal');
+        const btnCloseSettings = document.getElementById('btn-settings-close');
+
+        if (btnSettings && settingsModal) {
+            const toggleSettings = (e) => {
+                if (e.cancelable) e.preventDefault();
+                const isOpen = settingsModal.style.display === 'flex';
+                settingsModal.style.display = isOpen ? 'none' : 'flex';
+            };
+            btnSettings.addEventListener('click', toggleSettings);
+            btnSettings.addEventListener('touchstart', toggleSettings, { passive: false });
+            if (btnCloseSettings) {
+                btnCloseSettings.addEventListener('click', () => { settingsModal.style.display = 'none'; });
+                btnCloseSettings.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    settingsModal.style.display = 'none';
+                }, { passive: false });
+            }
+        }
+
+        // Act Warp Buttons
+        document.querySelectorAll('.btn-act-warp').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const act = parseInt(e.target.dataset.act, 10);
+                this.warpToAct(act);
+                if (settingsModal) settingsModal.style.display = 'none';
+            });
+        });
+
+        // Sensitivity slider
+        const sensSlider = document.getElementById('setting-sensitivity');
+        if (sensSlider) {
+            sensSlider.addEventListener('input', (e) => {
+                this.input.sensitivity = parseFloat(e.target.value);
+            });
+        }
+
+        // Audio Toggle
+        const btnAudio = document.getElementById('btn-toggle-audio');
+        if (btnAudio) {
+            btnAudio.addEventListener('click', () => {
+                const isMuted = btnAudio.classList.toggle('disabled');
+                btnAudio.textContent = isMuted ? "MUTED" : "ENABLED";
+                this.audio.setMuted(isMuted);
+            });
+        }
+
+        // Restart Run
+        const btnRestart = document.getElementById('btn-restart-game');
+        if (btnRestart) {
+            btnRestart.addEventListener('click', () => {
+                this.warpToAct(1);
+                if (settingsModal) settingsModal.style.display = 'none';
+            });
+        }
+    }
+
+    warpToAct(actNum) {
+        this.currentAct = actNum;
+        this.monsters.forEach(m => this.scene.remove(m));
+        this.monsters = [];
+        this.health = 100;
+        this.armor = 100;
+        this.dialogueTriggered = false;
+        this.talkingMonster = null;
+        this.inDialogue = false;
+        const dialogueModal = document.getElementById('dialogue-modal');
+        if (dialogueModal) dialogueModal.style.display = 'none';
+
+        const freezeBtn = document.getElementById('btn-power-freeze');
+        const kineticBtn = document.getElementById('btn-power-kinetic');
+
+        if (actNum === 1) {
+            this.player.position.set(0, 1.7, 0);
+            this.manualFreezeUnlocked = false;
+            this.kineticTrapUnlocked = false;
+            if (freezeBtn) freezeBtn.style.display = 'none';
+            if (kineticBtn) kineticBtn.style.display = 'none';
+            this.updateActBanner("ACT 1: FROZEN ONSLAUGHT", "SURVIVE THE TIME-STASIS CHAMBER");
+            this.spawnAct1Monsters();
+        } else if (actNum === 2) {
+            this.player.position.set(0, 1.7, -32);
+            this.manualFreezeUnlocked = true;
+            this.kineticTrapUnlocked = false;
+            if (freezeBtn) freezeBtn.style.display = 'flex';
+            if (kineticBtn) kineticBtn.style.display = 'none';
+            this.updateActBanner("ACT 2: THE KINETIC TRAP", "NAVIGATE THE CORRIDOR IN SLOW MOTION");
+        } else if (actNum === 3) {
+            this.player.position.set(0, 1.7, -125);
+            this.manualFreezeUnlocked = true;
+            this.kineticTrapUnlocked = true;
+            if (freezeBtn) freezeBtn.style.display = 'flex';
+            if (kineticBtn) kineticBtn.style.display = 'flex';
+            this.updateActBanner("ACT 3: THE BUGGED", "SURVIVE THE ENDLESS GLITCHED SWARM");
+            this.spawnAct3BuggedSwarm();
+        }
+        this.updateActiveWeaponView();
+        const hpBar = document.getElementById('hud-hp-bar');
+        const armorBar = document.getElementById('hud-armor-bar');
+        const hpLabel = document.getElementById('hud-hp-label');
+        const armorLabel = document.getElementById('hud-armor-label');
+        if (hpBar) hpBar.style.width = '100%';
+        if (armorBar) armorBar.style.width = '100%';
+        if (hpLabel) hpLabel.textContent = '+ 100';
+        if (armorLabel) armorLabel.textContent = '100';
+        this.showNotification(`WARPED TO ACT ${actNum}`);
     }
 
     advanceFromDialogue() {
