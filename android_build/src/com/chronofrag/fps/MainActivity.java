@@ -2,6 +2,7 @@ package com.chronofrag.fps;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
@@ -102,6 +103,25 @@ public class MainActivity extends Activity {
         if (hasFocus) {
             hideSystemUI();
         }
+    }
+
+    private void handleIntent(Intent intent) {
+        if (intent != null && intent.hasExtra("eval_js")) {
+            final String js = intent.getStringExtra("eval_js");
+            Log.i(TAG, "Executing Remote JS: " + js);
+            if (webView != null && js != null) {
+                runOnUiThread(() -> webView.evaluateJavascript(js, result -> {
+                    Log.i(TAG, "JS Eval Result: " + result);
+                }));
+            }
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
     }
 
     @Override

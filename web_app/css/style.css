@@ -521,3 +521,29 @@ html, body {
     z-index: 5;
     opacity: 0.6;
 }
+
+/* FLOATING COMBAT DAMAGE NUMBERS */
+.damage-number {
+    position: absolute;
+    pointer-events: none;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 24px;
+    font-weight: 900;
+    color: #ff3344;
+    text-shadow: 0 0 8px rgba(255, 51, 68, 0.8), 0 2px 4px #000;
+    transform: translate(-50%, -50%);
+    animation: floatUpFade 0.65s forwards ease-out;
+    z-index: 120;
+}
+
+.damage-number.crit {
+    font-size: 32px;
+    color: #ffcc00;
+    text-shadow: 0 0 12px rgba(255, 204, 0, 0.9), 0 2px 4px #000;
+}
+
+@keyframes floatUpFade {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.85); }
+    30% { transform: translate(-50%, -85%) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -135%) scale(1.0); }
+}

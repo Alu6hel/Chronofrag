@@ -7,6 +7,7 @@ class ChronoInput {
         this.moveVector = { x: 0, y: 0 };
         this.lookDelta = { x: 0, y: 0 };
         this.isFiring = false;
+        this.pendingFire = false;
         this.isADS = false;
         this.wantsReload = false;
         this.wantsTimeFreeze = false;
@@ -160,15 +161,16 @@ class ChronoInput {
         const btnFreeze = document.getElementById('btn-power-freeze');
         const btnKinetic = document.getElementById('btn-power-kinetic');
 
-        // Shoot Button (Touch + Mouse)
+        // Shoot Button (Touch + Mouse + Click)
         if (btnShoot) {
             const startShoot = (e) => {
-                e.preventDefault();
+                if (e.cancelable) e.preventDefault();
                 this.isFiring = true;
+                this.pendingFire = true;
                 btnShoot.classList.add('pressed');
             };
             const endShoot = (e) => {
-                e.preventDefault();
+                if (e.cancelable) e.preventDefault();
                 this.isFiring = false;
                 btnShoot.classList.remove('pressed');
             };
@@ -177,6 +179,9 @@ class ChronoInput {
             btnShoot.addEventListener('touchend', endShoot, { passive: false });
             btnShoot.addEventListener('mousedown', startShoot);
             btnShoot.addEventListener('mouseup', endShoot);
+            btnShoot.addEventListener('click', (e) => {
+                this.pendingFire = true;
+            });
         }
 
         // ADS Toggle

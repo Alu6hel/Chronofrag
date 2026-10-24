@@ -435,6 +435,7 @@ class ChronoGame {
 
         // Transition to Act 2
         this.currentAct = 2;
+        this.player.position.set(0, 1.7, -32);
         this.updateActBanner("ACT 2: THE KINETIC TRAP", "NAVIGATE THE CORRIDOR IN SLOW MOTION");
 
         // Clear Act 1 monsters and open corridor
@@ -481,7 +482,7 @@ class ChronoGame {
         this.handlePowers(delta);
 
         // Determine if Time advances using Alu Logic
-        const isFiringThisTick = this.input.isFiring;
+        const isFiringThisTick = this.input.isFiring || this.input.pendingFire;
         const timeAdvances = AluLogicBridge.calculateTimeAdvance(
             isFiringThisTick,
             this.timeAdvanceTicks,
@@ -580,7 +581,8 @@ class ChronoGame {
         }
 
         // Firing check
-        if (this.input.isFiring && now - wep.lastFired > wep.fireRate * 1000) {
+        if ((this.input.isFiring || this.input.pendingFire) && now - wep.lastFired > wep.fireRate * 1000) {
+            this.input.pendingFire = false;
             if (wep.ammo > 0) {
                 wep.ammo--;
                 wep.lastFired = now;
@@ -610,9 +612,11 @@ class ChronoGame {
             setTimeout(() => { activeMesh.position.z -= 0.08; }, 80);
         }
 
-        // Pitch in degrees
+        // Pitch in degrees & skyward look vector
+        const lookDir = new THREE.Vector3();
+        this.camera.getWorldDirection(lookDir);
         const pitchDeg = -this.playerPitch * (180 / Math.PI);
-        const isSkyShot = AluLogicBridge.isSkywardShot(pitchDeg);
+        const isSkyShot = (lookDir.y > 0.40) || AluLogicBridge.isSkywardShot(pitchDeg);
 
         // Raycast Bullet
         const raycaster = new THREE.Raycaster();
@@ -641,7 +645,7 @@ class ChronoGame {
                 }
             }
         } else {
-            // SKYWARD SHOT! Check for dialogue trigger with closest monster
+            // SKYWARD SHOT! Advancing time peacefully & triggering monster conversation
             this.checkSkyShotDialogueTrigger();
         }
     }
@@ -660,8 +664,24 @@ class ChronoGame {
             }
         });
 
-        if (closestMonster && AluLogicBridge.canInitiateMonsterDialogue(true, true, closestDist)) {
-            this.initiateSatiricalDialogue(closestMonster);
+        if (closestMonster) {
+            if (!closestMonster.isPeacefulApproaching) {
+                closestMonster.isPeacefulApproaching = true;
+                this.talkingMonster = closestMonster;
+                // Transition appearance to peaceful emerald / cyan
+                closestMonster.children.forEach(c => {
+                    if (c.material) {
+                        c.material.color.setHex(0x00ffcc);
+                        if (c.material.emissive) c.material.emissive.setHex(0x004433);
+                    }
+                });
+                this.showNotification("SURVIVING MONSTER HALTS: APPROACHING TO SPEAK...");
+                this.audio.playMonsterSpeech();
+            }
+
+            if (closestDist <= 5.5) {
+                this.initiateSatiricalDialogue(closestMonster);
+            }
         }
     }
 
@@ -697,6 +717,16 @@ class ChronoGame {
         monster.health -= damage;
         this.createBloodParticles(hitPoint);
 
+        // Floating combat damage text
+        if (hitPoint) {
+            const v = hitPoint.clone().project(this.camera);
+            if (v.z < 1.0) {
+                const screenX = (v.x * 0.5 + 0.5) * window.innerWidth;
+                const screenY = (-(v.y * 0.5) + 0.5) * window.innerHeight;
+                this.showFloatingDamage({ x: screenX, y: screenY }, damage, damage >= 50);
+            }
+        }
+
         if (monster.health <= 0) {
             this.kills++;
             this.score += 150;
@@ -716,6 +746,18 @@ class ChronoGame {
                 this.spawnMonster(1); // Multiplying trap!
             }
         }
+    }
+
+    showFloatingDamage(screenPos, damage, isCrit) {
+        const hud = document.getElementById('hud-overlay');
+        if (!hud) return;
+        const el = document.createElement('div');
+        el.className = 'damage-number' + (isCrit ? ' crit' : '');
+        el.textContent = `-${damage}` + (isCrit ? ' CRIT!' : '');
+        el.style.left = `${Math.round(screenPos.x)}px`;
+        el.style.top = `${Math.round(screenPos.y)}px`;
+        hud.appendChild(el);
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 650);
     }
 
     createBloodParticles(pos) {
@@ -772,6 +814,20 @@ class ChronoGame {
 
     updateMonsters(delta, timeAdvances) {
         this.monsters.forEach(m => {
+            if (m.isPeacefulApproaching) {
+                const toPlayer = new THREE.Vector3().subVectors(this.player.position, m.position);
+                toPlayer.y = 0;
+                const dist = toPlayer.length();
+                if (dist > 3.8) {
+                    toPlayer.normalize();
+                    m.position.addScaledVector(toPlayer, m.speed * 1.5);
+                    m.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
+                } else if (!this.dialogueTriggered) {
+                    this.initiateSatiricalDialogue(m);
+                }
+                return;
+            }
+
             if (m === this.talkingMonster) return; // Stopped peaceful
 
             if (m.type === "bugged") {
@@ -839,6 +895,7 @@ class ChronoGame {
 
                 // Advance to Act 3: Endless Mode
                 this.currentAct = 3;
+                this.player.position.set(0, 1.7, -115);
                 this.updateActBanner("ACT 3: THE BUGGED", "SURVIVE THE ENDLESS GLITCHED SWARM");
                 this.spawnAct3BuggedSwarm();
             }
@@ -909,7 +966,7 @@ class ChronoGame {
             const mapY = cy + (rx * sin + rz * cos);
 
             if (mapX >= 0 && mapX <= w && mapY >= 0 && mapY <= h) {
-                ctx.fillStyle = m.type === "bugged" ? "#bf00ff" : m === this.talkingMonster ? "#00ff88" : "#ff3344";
+                ctx.fillStyle = m.type === "bugged" ? "#bf00ff" : m.isPeacefulApproaching ? "#00ffcc" : m === this.talkingMonster ? "#00ff88" : "#ff3344";
                 ctx.beginPath();
                 ctx.arc(mapX, mapY, 3.5, 0, Math.PI * 2);
                 ctx.fill();
@@ -926,4 +983,30 @@ class ChronoGame {
 
 window.addEventListener('DOMContentLoaded', () => {
     window.game = new ChronoGame();
+    
+    // Live remote inspection & debugging API for ADB
+    window.game.debugShoot = function() {
+        this.fireBullet(this.weapons[this.input.selectedWeaponIndex]);
+    };
+    window.game.debugShootSky = function() {
+        this.playerPitch = -1.2;
+        this.camera.rotation.x = -1.2;
+        this.fireBullet(this.weapons[this.input.selectedWeaponIndex]);
+    };
+    window.game.debugAdvanceAct = function(actNum) {
+        if (actNum === 2) {
+            this.advanceFromDialogue();
+        } else if (actNum === 3) {
+            this.currentAct = 3;
+            this.kineticTrapUnlocked = true;
+            const kineticBtn = document.getElementById('btn-power-kinetic');
+            if (kineticBtn) kineticBtn.style.display = 'flex';
+            this.player.position.set(0, 1.7, -125);
+            this.updateActBanner("ACT 3: THE BUGGED", "SURVIVE THE ENDLESS GLITCHED SWARM");
+            this.spawnAct3BuggedSwarm();
+        }
+    };
+    window.game.debugTriggerKineticBlock = function() {
+        this.triggerKineticSpeedBlock();
+    };
 });

@@ -27,11 +27,17 @@
 
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTask"
             android:exported="true"
             android:screenOrientation="sensorLandscape"
             android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode|density"
             android:windowSoftInputMode="adjustResize">
+            <layout
+                android:defaultHeight="1080dp"
+                android:defaultWidth="1920dp"
+                android:minHeight="480dp"
+                android:minWidth="640dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
