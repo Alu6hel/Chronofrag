@@ -1,0 +1,8 @@
+android_build/build/
+android_build/assets/
+alu_core/*.ll
+alu_core/*.exe
+alu_core/*.so
+*.pyc
+__pycache__/
+.DS_Store

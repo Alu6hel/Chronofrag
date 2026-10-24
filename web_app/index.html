@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Chronofrag — Mobile FPS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="game-canvas"></canvas>
+    </div>
+
+    <div class="crt-overlay"></div>
+
+    <div id="hud-overlay">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <!-- Minimap Radar & Health/Armor -->
+            <div class="player-status-group">
+                <div class="radar-wrapper">
+                    <canvas id="radar-canvas"></canvas>
+                </div>
+                <div class="health-armor-box">
+                    <div class="bar-container">
+                        <div id="hud-hp-bar" class="bar-fill-hp"></div>
+                        <span id="hud-hp-label" class="bar-label">+ 100</span>
+                    </div>
+                    <div class="bar-container">
+                        <div id="hud-armor-bar" class="bar-fill-armor"></div>
+                        <span id="hud-armor-label" class="bar-label">100</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campaign Act & Objective Banner -->
+            <div class="act-info-banner">
+                <div id="hud-act-title" class="act-title">ACT 1: FROZEN ONSLAUGHT</div>
+                <div id="hud-act-objective" class="act-objective">SURVIVE THE TIME-STASIS CHAMBER</div>
+                <div id="hud-time-badge" class="time-dilation-badge">TIME: FROZEN [FIRE TO MOVE]</div>
+            </div>
+
+            <!-- Score & Kill Counter -->
+            <div class="score-group">
+                <div class="stat-pill">KILLS: <span id="hud-kills">0</span></div>
+                <div class="stat-pill">SCORE: <span id="hud-score">0</span></div>
+                <div class="stat-pill">AMMO: <span id="hud-ammo">40 / 40</span></div>
+            </div>
+        </div>
+
+        <!-- Crosshair & Feedback -->
+        <div id="crosshair">
+            <div class="cross-line top"></div>
+            <div class="cross-line bottom"></div>
+            <div class="cross-line left"></div>
+            <div class="cross-line right"></div>
+            <div class="cross-dot"></div>
+        </div>
+        <div id="hit-marker"></div>
+
+        <!-- Kinetic Speed Block Alert -->
+        <div id="kinetic-alert">⚡ KINETIC SPEED BLOCK! MOVE SLOWER! ⚡</div>
+
+        <!-- Touch Controls -->
+        <!-- Left Virtual Joystick -->
+        <div id="joystick-zone" class="hud-interactive">
+            <div id="joystick-knob"></div>
+        </div>
+
+        <!-- Right Touch Look Zone -->
+        <div id="look-zone" class="hud-interactive"></div>
+
+        <!-- Action Buttons (Bottom Right) -->
+        <div class="action-cluster hud-interactive">
+            <div class="action-row">
+                <button id="btn-power-freeze" class="btn-hud btn-power" title="Manual Time Freeze">FREEZE</button>
+                <button id="btn-power-kinetic" class="btn-hud btn-power" title="Kinetic Stride">STRIDE</button>
+                <button id="btn-ads" class="btn-hud btn-ads" title="Aim Down Sights">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="2"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/></svg>
+                </button>
+            </div>
+            <div class="action-row">
+                <button id="btn-reload" class="btn-hud btn-reload">RELOAD</button>
+                <button id="btn-shoot" class="btn-hud btn-shoot" title="Fire Weapon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Weapon Dock (Bottom Center) -->
+        <div class="weapon-dock hud-interactive">
+            <div class="weapon-slot active" data-index="0">
+                <span class="weapon-name">DUAL PISTOLS</span>
+                <span class="weapon-ammo">40 / 40</span>
+            </div>
+            <div class="weapon-slot" data-index="1">
+                <span class="weapon-name">NEON AK-CHRONO</span>
+                <span class="weapon-ammo">30 / 30</span>
+            </div>
+            <div class="weapon-slot" data-index="2">
+                <span class="weapon-name">HEAVY CANNON</span>
+                <span class="weapon-ammo">8 / 8</span>
+            </div>
+        </div>
+
+        <!-- Satirical Monster Dialogue Modal -->
+        <div id="dialogue-modal" class="hud-interactive">
+            <div class="dialogue-header">
+                <div class="dialogue-avatar">👹</div>
+                <div>
+                    <div id="dialogue-title" class="dialogue-speaker">CHRONO-FIEND VANGUARD</div>
+                    <div class="dialogue-tagline">Sentient Spatial Anomaly Resident</div>
+                </div>
+            </div>
+            <div id="dialogue-roast" class="dialogue-roast">"Looking up? Finally."</div>
+            <div id="dialogue-body" class="dialogue-body">
+                Did you really just vaporize half our clan in frozen time before testing if aiming straight into the air advances time without shooting us?
+            </div>
+            <div class="dialogue-choices">
+                <button id="dialogue-btn-proceed" class="dialogue-btn">⚡ ACCEPT CHRONO-STASIS POWER & ADVANCE TO ACT 2</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/lib/three.min.js"></script>
+    <script src="js/game/AudioSystem.js"></script>
+    <script src="js/game/AluLogicBridge.js"></script>
+    <script src="js/game/TouchInput.js"></script>
+    <script src="js/game/ChronoGame.js"></script>
+</body>
+</html>

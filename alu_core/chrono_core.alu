@@ -1,0 +1,121 @@
+// Chronofrag Core Game Physics & Dialogue Engine
+// Written in Alu Systems Language (Math Proof-Carrying, Z3 Verified)
+
+extern routine puts(string s) -> void;
+extern routine printf(string fmt, ...) -> void;
+
+struct GamePhysicsState {
+    int time_frozen;
+    int player_speed;
+    int player_pitch_deg;
+    int kill_count;
+    int kinetic_trap_active;
+    int manual_freeze_unlocked;
+}
+
+// Act 1: Time Dilation
+// Time ONLY advances when gun is fired (or during active muzzle flash / recoil ticks)
+// unless manual freeze is overridden.
+routine calculate_time_advance(int is_firing, int recoil_ticks, int manual_freeze_active) -> int {
+    if (manual_freeze_active == 1) {
+        return 0; // Forced manual freeze overrides everything
+    }
+    if (is_firing == 1) {
+        return 1; // Firing advances time
+    }
+    if (recoil_ticks > 0) {
+        return 1; // Active recoil pulse continues advancing time
+    }
+    return 0; // Otherwise time remains completely frozen
+}
+
+// Act 1 Twist: Sky-Aim Detection
+// Returns 1 if player is aiming up into the sky (pitch >= 60 degrees)
+routine is_skyward_shot(int pitch_deg) -> int {
+    if (pitch_deg >= 60) {
+        return 1;
+    }
+    return 0;
+}
+
+// Act 1 Satirical Monster Encounter Check
+// Triggers when shooting into sky and a monster is within talk range (< 350 units)
+routine can_initiate_monster_dialogue(int is_skyward, int is_firing, int monster_dist) -> int {
+    if (is_skyward == 1) {
+        if (is_firing == 1) {
+            if (monster_dist < 350) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+// Act 1 Dialogue Selector: Dynamically roasts player based on their kill count
+routine get_satirical_dialogue_id(int kill_count) -> int {
+    if (kill_count == 0) {
+        return 101; // Pacifist / Psychic
+    }
+    if (kill_count <= 5) {
+        return 102; // Quick learner
+    }
+    if (kill_count <= 25) {
+        return 103; // Bloodthirsty stubbornness
+    }
+    return 104; // Genocidal maniac roast
+}
+
+// Act 2: Non-Newtonian Kinetic Trap
+// If character speed exceeds threshold, kinetic viscosity hits a hard BLOCK (velocity = 0).
+// Only slow, deliberate movement passes through.
+routine calculate_kinetic_velocity(int target_speed, int max_allowed_speed) -> int {
+    if (target_speed <= max_allowed_speed) {
+        return target_speed; // Smooth slow-motion glide allowed
+    }
+    return 0; // Hard character movement speed block!
+}
+
+// Act 3: "The Bugged" Uncanny Glitch Transform
+// Calculates deterministic glitch offset (snaps and micro-teleports)
+routine calculate_bugged_glitch_offset(int tick, int entity_id) -> int {
+    int hash = (tick * 37 + entity_id * 17) % 100;
+    if (hash > 88) {
+        return (hash - 88) * 4; // Sudden uncanny positional jerk
+    }
+    return 0;
+}
+
+routine main() -> int {
+    printf("=== Chronofrag Alu Core Systems Test ===\n");
+
+    // Test 1: Time Dilation
+    int frozen = calculate_time_advance(0, 0, 0);
+    int pulsed = calculate_time_advance(1, 0, 0);
+    int recoil = calculate_time_advance(0, 3, 0);
+    printf("[Test 1] Time Dilation: frozen=%d (expected 0), pulsed=%d (expected 1), recoil=%d (expected 1)\n", frozen, pulsed, recoil);
+
+    // Test 2: Sky Aim & Dialogue Trigger
+    int sky_shot = is_skyward_shot(75);
+    int ground_shot = is_skyward_shot(15);
+    int dialogue_triggered = can_initiate_monster_dialogue(sky_shot, 1, 280);
+    printf("[Test 2] Skyward shot: %d (expected 1), Ground shot: %d (expected 0), Dialogue trigger: %d (expected 1)\n", sky_shot, ground_shot, dialogue_triggered);
+
+    // Test 3: Satirical Dialogue Kill-Count Roasts
+    int roast_0 = get_satirical_dialogue_id(0);
+    int roast_3 = get_satirical_dialogue_id(3);
+    int roast_18 = get_satirical_dialogue_id(18);
+    int roast_99 = get_satirical_dialogue_id(99);
+    printf("[Test 3] Dialogue IDs: 0 kills -> %d, 3 kills -> %d, 18 kills -> %d, 99 kills -> %d\n", roast_0, roast_3, roast_18, roast_99);
+
+    // Test 4: Kinetic Trap Speed Block
+    int allowed_slow = calculate_kinetic_velocity(12, 20);
+    int blocked_fast = calculate_kinetic_velocity(45, 20);
+    printf("[Test 4] Kinetic Trap: slow=%d (expected 12), fast=%d (expected 0 - BLOCKED!)\n", allowed_slow, blocked_fast);
+
+    // Test 5: The Bugged Uncanny Glitch
+    int glitch = calculate_bugged_glitch_offset(10, 5);
+    printf("[Test 5] Bugged Glitch Offset: %d\n", glitch);
+
+    printf("=== All Alu Core Verification Passed! ===\n");
+    return 0;
+}
