@@ -16,6 +16,9 @@ class ChronoGame {
         this.audio = window.ChronoAudio;
 
         // Game State
+        this.gameState = 'TITLE_MENU'; // 'TITLE_MENU', 'PLAYING', 'PAUSED'
+        this.screenShakeEnabled = true;
+        this.crtScanlinesEnabled = true;
         this.currentAct = 1; // 1: Courtyard Stasis, 2: Kinetic Corridor, 3: The Bugged Vault
         this.health = 100;
         this.armor = 100;
@@ -71,11 +74,24 @@ class ChronoGame {
         this.dialogueTriggered = false;
         this.commsDismissTimeout = null;
 
-        // Animated Fortress Gates
+        // Animated Spaceship Gates & Airlocks
         this.gateLeftGroup = null;
         this.gateRightGroup = null;
         this.gateOpenAngle = 0;
         this.gatesOpening = false;
+        this.airlockLeftGroup = null;
+        this.airlockRightGroup = null;
+        this.airlockDoorsOpening = false;
+        this.airlockOpenProgress = 0;
+
+        // In-Engine Cinematic Cutscene State
+        this.inCutscene = false;
+        this.cutsceneTimer = 0;
+        this.cutsceneDuration = 8.5;
+
+        // Corridor Movement Puzzle State
+        this.laserBarriers = [];
+        this.lastKineticAlertTime = 0;
 
         // Weapons Arsenal
         this.weapons = [
@@ -228,28 +244,39 @@ class ChronoGame {
     buildLevelArchitecture() {
         this.levelGeometry = [];
 
-        // --- SECTOR 1: MEDITERRANEAN FORTRESS COURTYARD (Act 1 - Image 2 & 3) ---
-        const cobbleMat = new THREE.MeshStandardMaterial({
-            map: this.textures.cobblestone,
-            normalMap: this.textures.cobblestoneNormal,
-            roughness: 0.65,
-            metalness: 0.15
+        // =========================================================================
+        // --- SECTOR 1: SPACESHIP STASIS HANGAR & CRYO CONTAINMENT DECK (ACT 1) ---
+        // =========================================================================
+        const deckMat = new THREE.MeshStandardMaterial({
+            map: this.textures.conduitWall,
+            normalMap: this.textures.conduitWallNormal,
+            roughness: 0.38,
+            metalness: 0.72
         });
-        const courtyardFloor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), cobbleMat);
-        courtyardFloor.rotation.x = -Math.PI / 2;
-        courtyardFloor.position.set(0, 0, 0);
-        this.scene.add(courtyardFloor);
-        this.levelGeometry.push(courtyardFloor);
+        const hangarFloor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), deckMat);
+        hangarFloor.rotation.x = -Math.PI / 2;
+        hangarFloor.position.set(0, 0, 0);
+        this.scene.add(hangarFloor);
+        this.levelGeometry.push(hangarFloor);
 
-        const stoneMat = new THREE.MeshStandardMaterial({
-            map: this.textures.ancientStone,
-            normalMap: this.textures.ancientStoneNormal,
-            roughness: 0.75,
-            metalness: 0.2
+        // Deck Hazard & Navigation Seam Lines
+        const deckStripeMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.45 });
+        [-12, 0, 12].forEach(lx => {
+            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 48), deckStripeMat);
+            stripe.rotation.x = -Math.PI / 2;
+            stripe.position.set(lx, 0.02, 0);
+            this.scene.add(stripe);
+        });
+
+        const hullWallMat = new THREE.MeshStandardMaterial({
+            map: this.textures.conduitWall,
+            normalMap: this.textures.conduitWallNormal,
+            roughness: 0.5,
+            metalness: 0.65
         });
 
         const addWall = (w, h, x, y, z, rotY = 0) => {
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, 1.2), stoneMat);
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, 1.2), hullWallMat);
             wall.position.set(x, y, z);
             wall.rotation.y = rotY;
             this.scene.add(wall);
@@ -257,160 +284,153 @@ class ChronoGame {
             return wall;
         };
 
+        // Spaceship Containment Deck Exterior Bulkhead Walls
         addWall(50, 9, 0, 4.5, 25);
         addWall(50, 9, -25, 4.5, 0, Math.PI / 2);
         addWall(50, 9, 25, 4.5, 0, Math.PI / 2);
 
-        // North Wall with Archway Opening for the Great Wooden Gate
+        // Forward Bulkhead Wall with Airlock Portal Opening into Sector 2
         addWall(19, 9, -15.5, 4.5, -25);
         addWall(19, 9, 15.5, 4.5, -25);
         addWall(12, 3, 0, 7.5, -25);
 
-        // Decorative Stone Archway Framing the Gate
-        const archPillarMat = new THREE.MeshStandardMaterial({
-            map: this.textures.ancientStone,
-            normalMap: this.textures.ancientStoneNormal,
-            roughness: 0.6
+        // Heavy Reinforced Titanium Airlock Frame
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0x181e28, metalness: 0.9, roughness: 0.25 });
+        const leftFrame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 7.5, 2.2), frameMat);
+        leftFrame.position.set(-5.5, 3.75, -24.5);
+        this.scene.add(leftFrame);
+
+        const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 7.5, 2.2), frameMat);
+        rightFrame.position.set(5.5, 3.75, -24.5);
+        this.scene.add(rightFrame);
+
+        const topArchFrame = new THREE.Mesh(new THREE.BoxGeometry(12.6, 1.5, 2.2), frameMat);
+        topArchFrame.position.set(0, 6.75, -24.5);
+        this.scene.add(topArchFrame);
+
+        // Heavy Hydraulic Sliding Blast Airlock Doors at z = -24.8
+        const blastDoorMat = new THREE.MeshStandardMaterial({
+            color: 0x222a36,
+            metalness: 0.88,
+            roughness: 0.32
         });
-        const leftPillar = new THREE.Mesh(new THREE.BoxGeometry(1.6, 7.5, 2.0), archPillarMat);
-        leftPillar.position.set(-5.5, 3.75, -24.5);
-        this.scene.add(leftPillar);
+        const hazardMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
 
-        const rightPillar = new THREE.Mesh(new THREE.BoxGeometry(1.6, 7.5, 2.0), archPillarMat);
-        rightPillar.position.set(5.5, 3.75, -24.5);
-        this.scene.add(rightPillar);
-
-        const archRib = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 1.8, 16, 1, false, 0, Math.PI), archPillarMat);
-        archRib.rotation.z = Math.PI / 2;
-        archRib.rotation.y = Math.PI / 2;
-        archRib.position.set(0, 6.0, -24.5);
-        this.scene.add(archRib);
-
-        // Heavy Ancient Wooden Fortress Double Doors with Hinged Groups (Strict Reference to Image 3)
-        const woodGateMat = new THREE.MeshStandardMaterial({
-            map: this.textures.woodenGate,
-            normalMap: this.textures.woodenGateNormal,
-            roughness: 0.55,
-            metalness: 0.4
-        });
-        const ironMat = new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.4, metalness: 0.9 });
-
-        // Left Gate Group (Hinged at x = -4.75)
+        // Left Blast Door (Slides left along X)
         this.gateLeftGroup = new THREE.Group();
-        this.gateLeftGroup.position.set(-4.75, 3.0, -24.8);
-        const gateLeftMesh = new THREE.Mesh(new THREE.BoxGeometry(4.7, 6.0, 0.35), woodGateMat);
-        gateLeftMesh.position.set(2.35, 0, 0); // Origin at hinge
-        this.gateLeftGroup.add(gateLeftMesh);
-
-        [ -1.5, 0.2, 1.8 ].forEach(gy => {
-            const strap = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.22, 0.42), ironMat);
-            strap.position.set(2.35, gy, 0);
-            this.gateLeftGroup.add(strap);
+        this.gateLeftGroup.position.set(0, 3.0, -24.8);
+        const doorLeft = new THREE.Mesh(new THREE.BoxGeometry(4.8, 6.0, 0.4), blastDoorMat);
+        doorLeft.position.set(-2.4, 0, 0);
+        this.gateLeftGroup.add(doorLeft);
+        [-1.8, 0, 1.8].forEach(hy => {
+            const hz = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, 0.42), hazardMat);
+            hz.position.set(-2.4, hy, 0);
+            this.gateLeftGroup.add(hz);
         });
-        const ringLeft = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.05, 8, 16), ironMat);
-        ringLeft.position.set(4.0, -0.2, 0.2);
-        this.gateLeftGroup.add(ringLeft);
         this.scene.add(this.gateLeftGroup);
 
-        // Right Gate Group (Hinged at x = 4.75)
+        // Right Blast Door (Slides right along X)
         this.gateRightGroup = new THREE.Group();
-        this.gateRightGroup.position.set(4.75, 3.0, -24.8);
-        const gateRightMesh = new THREE.Mesh(new THREE.BoxGeometry(4.7, 6.0, 0.35), woodGateMat);
-        gateRightMesh.position.set(-2.35, 0, 0); // Origin at hinge
-        this.gateRightGroup.add(gateRightMesh);
-
-        [ -1.5, 0.2, 1.8 ].forEach(gy => {
-            const strap = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.22, 0.42), ironMat);
-            strap.position.set(-2.35, gy, 0);
-            this.gateRightGroup.add(strap);
+        this.gateRightGroup.position.set(0, 3.0, -24.8);
+        const doorRight = new THREE.Mesh(new THREE.BoxGeometry(4.8, 6.0, 0.4), blastDoorMat);
+        doorRight.position.set(2.4, 0, 0);
+        this.gateRightGroup.add(doorRight);
+        [-1.8, 0, 1.8].forEach(hy => {
+            const hz = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, 0.42), hazardMat);
+            hz.position.set(2.4, hy, 0);
+            this.gateRightGroup.add(hz);
         });
-        const ringRight = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.05, 8, 16), ironMat);
-        ringRight.position.set(-4.0, -0.2, 0.2);
-        this.gateRightGroup.add(ringRight);
         this.scene.add(this.gateRightGroup);
 
-        // Courtyard Festive Hanging Bunting Pennants (Reference 1)
-        const buntingMat = new THREE.MeshStandardMaterial({
-            map: this.textures.buntingPennants,
+        // 4 Cryogenic Stasis Containment Pods in Sector 1
+        const podGlassMat = new THREE.MeshStandardMaterial({
+            color: 0x00f0ff,
             transparent: true,
-            side: THREE.DoubleSide,
-            roughness: 0.75
+            opacity: 0.45,
+            roughness: 0.1,
+            metalness: 0.2
         });
-        const addBuntingLine = (x1, z1, x2, z2, y = 7.2) => {
-            const dx = x2 - x1;
-            const dz = z2 - z1;
-            const len = Math.hypot(dx, dz);
-            const angle = Math.atan2(dx, dz);
-            const bunting = new THREE.Mesh(new THREE.PlaneGeometry(len, 1.4), buntingMat);
-            bunting.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
-            bunting.rotation.y = angle + Math.PI / 2;
-            this.scene.add(bunting);
-            this.decorations.push(bunting);
+        const podCoreMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+        const podBaseMat = new THREE.MeshStandardMaterial({ color: 0x161c24, metalness: 0.9, roughness: 0.3 });
+
+        const addCryoPod = (x, z) => {
+            const pod = new THREE.Group();
+            pod.position.set(x, 0, z);
+
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.6, 16), podBaseMat);
+            base.position.y = 0.3;
+            pod.add(base);
+
+            const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 3.2, 16), podGlassMat);
+            glass.position.y = 2.2;
+            pod.add(glass);
+
+            const core = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 2.6, 12), podCoreMat);
+            core.position.y = 2.2;
+            pod.add(core);
+
+            const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.1, 0.5, 16), podBaseMat);
+            cap.position.y = 4.0;
+            pod.add(cap);
+
+            const podLight = new THREE.PointLight(0x00f0ff, 1.4, 8);
+            podLight.position.y = 2.4;
+            pod.add(podLight);
+
+            this.scene.add(pod);
+            this.levelGeometry.push(base);
         };
-        addBuntingLine(-11, -10, 11, -10, 7.3);
-        addBuntingLine(-11, 10, 11, 10, 7.3);
-        addBuntingLine(-11, -10, -11, 10, 7.1);
-        addBuntingLine(11, -10, 11, 10, 7.1);
-        addBuntingLine(-5.5, -24, 5.5, -24, 6.6);
+        addCryoPod(-10, -10);
+        addCryoPod(10, -10);
+        addCryoPod(-10, 10);
+        addCryoPod(10, 10);
 
-        // Wrought Iron Lanterns with Warm Amber Flame Lights (Reference 1)
-        const lanternMat = new THREE.MeshStandardMaterial({ color: 0x111116, metalness: 0.9, roughness: 0.3 });
-        const lanternBulbMat = new THREE.MeshBasicMaterial({ color: 0xffaa44 });
-        const addCourtyardLantern = (x, y, z) => {
-            const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.7, 0.4), lanternMat);
-            lantern.position.set(x, y, z);
-            const bulb = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.35, 0.2), lanternBulbMat);
-            lantern.add(bulb);
-            const lampLight = new THREE.PointLight(0xffa834, 1.1, 10);
-            lantern.add(lampLight);
-            this.scene.add(lantern);
+        // Sci-Fi Cargo Containers in Hangar
+        const sciFiCrateMat = new THREE.MeshStandardMaterial({
+            map: this.textures.conduitWall,
+            roughness: 0.45,
+            metalness: 0.75
+        });
+        const addSciFiContainer = (x, z, sx = 2.4, sy = 2.0, sz = 2.4, rotY = 0) => {
+            const c = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), sciFiCrateMat);
+            c.position.set(x, sy / 2, z);
+            c.rotation.y = rotY;
+            this.scene.add(c);
+            this.levelGeometry.push(c);
         };
-        addCourtyardLantern(-5.2, 4.5, -24.0);
-        addCourtyardLantern(5.2, 4.5, -24.0);
-        addCourtyardLantern(-11, 4.8, -9.0);
-        addCourtyardLantern(11, 4.8, -9.0);
+        addSciFiContainer(-8, 5, 2.4, 2.0, 2.4, 0.2);
+        addSciFiContainer(-6.5, 6.5, 1.8, 1.6, 1.8, -0.15);
+        addSciFiContainer(11, 2, 2.6, 2.2, 2.6, 0.35);
+        addSciFiContainer(10, 4.5, 2.0, 1.8, 2.0, -0.4);
 
-        // Courtyard Props: Cover Crates, Barrels, and Stone Columns
-        const crateMat = new THREE.MeshStandardMaterial({ map: this.textures.woodenGate, roughness: 0.7 });
-        const barrelMat = new THREE.MeshStandardMaterial({ map: this.textures.woodenGate, roughness: 0.6 });
+        // Structural Support Ribs spanning the Spaceship Ceiling
+        const ribMat = new THREE.MeshStandardMaterial({ color: 0x141a24, metalness: 0.85, roughness: 0.35 });
+        [-15, 0, 15].forEach(rz => {
+            const arch = new THREE.Mesh(new THREE.BoxGeometry(50, 0.8, 1.4), ribMat);
+            arch.position.set(0, 8.6, rz);
+            this.scene.add(arch);
 
-        const addCrate = (x, z, s = 1.4, rotY = 0) => {
-            const crate = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), crateMat);
-            crate.position.set(x, s / 2, z);
-            crate.rotation.y = rotY;
-            this.scene.add(crate);
-        };
-        addCrate(-8, 5, 1.5, 0.3);
-        addCrate(-7, 6, 1.3, -0.2);
-        addCrate(10, 2, 1.6, 0.45);
-        addCrate(11, 4, 1.2, -0.5);
-
-        const addBarrel = (x, z) => {
-            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 1.3, 14), barrelMat);
-            barrel.position.set(x, 0.65, z);
-            this.scene.add(barrel);
-        };
-        addBarrel(-9, 4);
-        addBarrel(-8.2, 3.5);
-        addBarrel(12, 1.5);
-
-        [-11, 11].forEach(px => {
-            [-10, 10].forEach(pz => {
-                const column = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 8.5, 16), stoneMat);
-                column.position.set(px, 4.25, pz);
-                this.scene.add(column);
-                const cap = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.6, 2.4), stoneMat);
-                cap.position.set(px, 8.2, pz);
-                this.scene.add(cap);
-            });
+            const archGlow = new THREE.PointLight(0x00f0ff, 0.8, 18);
+            archGlow.position.set(0, 8.0, rz);
+            this.scene.add(archGlow);
         });
 
-        const skyRing = new THREE.Mesh(new THREE.RingGeometry(8, 26, 32), stoneMat);
-        skyRing.rotation.x = Math.PI / 2;
-        skyRing.position.set(0, 9.0, 0);
-        this.scene.add(skyRing);
+        // Overhead Spaceship Observation Skylight looking into Deep Space Stars
+        const starGeom = new THREE.BufferGeometry();
+        const starCount = 200;
+        const starCoords = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount * 3; i += 3) {
+            starCoords[i] = (Math.random() - 0.5) * 80;
+            starCoords[i + 1] = 18 + Math.random() * 25;
+            starCoords[i + 2] = (Math.random() - 0.5) * 80;
+        }
+        starGeom.setAttribute('position', new THREE.BufferAttribute(starCoords, 3));
+        const starPoints = new THREE.Points(starGeom, new THREE.PointsMaterial({ color: 0xeeffff, size: 0.4 }));
+        this.scene.add(starPoints);
 
-        // --- SECTOR 2: HIGH-TECH TACTICAL FACILITY CORRIDOR (Act 2 - Image 4) ---
+        // =========================================================================
+        // --- SECTOR 2: SPACESHIP CONDUIT CORRIDOR & MOVEMENT PUZZLE (ACT 2) ---
+        // =========================================================================
         const woodFloorMat = new THREE.MeshStandardMaterial({
             map: this.textures.woodFloor,
             normalMap: this.textures.woodFloorNormal,
@@ -500,22 +520,7 @@ class ChronoGame {
         addBriefingBoard(5.3, -42, 0);
         addBriefingBoard(5.3, -65, 0);
 
-        // Illuminated Neon EXIT Signs (Strict Reference to Image 3)
-        const exitMat = new THREE.MeshBasicMaterial({ map: this.textures.exitSign, side: THREE.DoubleSide });
-        const addExitSign = (x, y, z, rotY = 0) => {
-            const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.8), exitMat);
-            sign.position.set(x, y, z);
-            sign.rotation.y = rotY;
-            const signGlow = new THREE.PointLight(0x00ff88, 1.2, 8);
-            signGlow.position.set(0, 0, 0.2);
-            sign.add(signGlow);
-            this.scene.add(sign);
-        };
-        addExitSign(0, 6.2, -25.6, Math.PI); // Facing courtyard
-        addExitSign(0, 6.2, -26.4, 0);       // Facing into corridor
-        addExitSign(0, 6.2, -84.2, 0);       // Above exit into Act 3
-
-        // Industrial Electrical Breaker Boxes on Concrete Pillars (Strict Reference to Image 3)
+        // Industrial Electrical Breaker Boxes
         const breakerMat = new THREE.MeshStandardMaterial({
             map: this.textures.breakerBox,
             roughness: 0.45,
@@ -529,20 +534,57 @@ class ChronoGame {
         };
         addBreakerBox(-5.35, 3.2, -48, Math.PI / 2);
         addBreakerBox(5.35, 3.2, -72, -Math.PI / 2);
-        addBreakerBox(-5.35, 3.2, -36, Math.PI / 2);
 
-        const kineticGeo = new THREE.BoxGeometry(11.5, 7.0, 58);
-        const kineticMat = new THREE.MeshBasicMaterial({
-            map: this.textures.kineticAlbedo,
-            transparent: true,
-            opacity: 0.26,
-            color: 0x00f0ff,
-            side: THREE.DoubleSide
+        // --- CORRIDOR MOVEMENT PUZZLE: 4 KINETIC LASER RESONANCE BARRIERS ---
+        this.laserBarriers = [];
+        const pylonMat = new THREE.MeshStandardMaterial({ color: 0x161e28, metalness: 0.88, roughness: 0.28 });
+        const barrierZCoords = [-38, -52, -66, -78];
+
+        barrierZCoords.forEach((bz) => {
+            const barrierGroup = new THREE.Group();
+            barrierGroup.position.set(0, 0, bz);
+
+            const leftPylon = new THREE.Mesh(new THREE.BoxGeometry(0.5, 7.2, 0.6), pylonMat);
+            leftPylon.position.set(-5.6, 3.6, 0);
+            barrierGroup.add(leftPylon);
+
+            const rightPylon = new THREE.Mesh(new THREE.BoxGeometry(0.5, 7.2, 0.6), pylonMat);
+            rightPylon.position.set(5.6, 3.6, 0);
+            barrierGroup.add(rightPylon);
+
+            const beams = [];
+            [1.2, 2.4, 3.8].forEach(by => {
+                const beamGeo = new THREE.CylinderGeometry(0.045, 0.045, 10.8, 8);
+                const beamMesh = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({
+                    color: 0x00f0ff,
+                    transparent: true,
+                    opacity: 0.75
+                }));
+                beamMesh.rotation.z = Math.PI / 2;
+                beamMesh.position.set(0, by, 0);
+                barrierGroup.add(beamMesh);
+                beams.push(beamMesh);
+            });
+
+            const statusMesh = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
+            statusMesh.position.set(0, 6.8, 0);
+            barrierGroup.add(statusMesh);
+
+            const statusLight = new THREE.PointLight(0x00f0ff, 0.9, 10);
+            statusLight.position.set(0, 6.5, 0);
+            barrierGroup.add(statusLight);
+
+            this.scene.add(barrierGroup);
+            this.laserBarriers.push({
+                z: bz,
+                group: barrierGroup,
+                beams: beams,
+                statusMesh: statusMesh,
+                statusLight: statusLight
+            });
         });
-        this.kineticField = new THREE.Mesh(kineticGeo, kineticMat);
-        this.kineticField.position.set(0, 3.5, -55);
-        this.scene.add(this.kineticField);
 
+        // Kinetic Stasis Core Artifact Mesh at z = -80
         const coreGeo = new THREE.IcosahedronGeometry(1.4, 2);
         const coreMat = new THREE.MeshStandardMaterial({
             color: 0xffd700,
@@ -560,49 +602,117 @@ class ChronoGame {
         this.scene.add(coreRing);
         this.coreRingMesh = coreRing;
 
-        // --- SECTOR 3: THE ENDLESS ANOMALY VAULT (Act 3) ---
-        const vaultFloor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), woodFloorMat);
-        vaultFloor.rotation.x = -Math.PI / 2;
-        vaultFloor.position.set(0, 0, -140);
-        this.scene.add(vaultFloor);
-        this.levelGeometry.push(vaultFloor);
+        // --- EXTERIOR PLANETARY AIRLOCK GATES (AT z = -86) ---
+        const airlockBulkhead = new THREE.Mesh(new THREE.BoxGeometry(12, 7.5, 1.2), hullWallMat);
+        airlockBulkhead.position.set(0, 3.75, -86);
+        this.scene.add(airlockBulkhead);
+        this.levelGeometry.push(airlockBulkhead);
 
-        addWall(80, 12, 0, 6, -180);
-        addWall(80, 12, -40, 6, -140, Math.PI / 2);
-        addWall(80, 12, 40, 6, -140, Math.PI / 2);
+        const airlockArchPortal = new THREE.Mesh(new THREE.BoxGeometry(7.2, 5.8, 1.4), new THREE.MeshBasicMaterial({ color: 0x04060a }));
+        airlockArchPortal.position.set(0, 2.9, -86);
+        this.scene.add(airlockArchPortal);
 
-        [-18, 18].forEach(vx => {
-            [-125, -155].forEach(vz => {
-                const p = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.8, 12, 16), stoneMat);
-                p.position.set(vx, 6, vz);
-                this.scene.add(p);
-                const pGlow = new THREE.PointLight(0xbf00ff, 1.2, 14);
-                pGlow.position.set(vx, 4, vz);
-                this.scene.add(pGlow);
-            });
+        // Airlock Doors Left & Right
+        this.airlockLeftGroup = new THREE.Group();
+        this.airlockLeftGroup.position.set(0, 2.9, -85.8);
+        const airlockLeftMesh = new THREE.Mesh(new THREE.BoxGeometry(3.6, 5.8, 0.35), blastDoorMat);
+        airlockLeftMesh.position.set(-1.8, 0, 0);
+        this.airlockLeftGroup.add(airlockLeftMesh);
+        this.scene.add(this.airlockLeftGroup);
+
+        this.airlockRightGroup = new THREE.Group();
+        this.airlockRightGroup.position.set(0, 2.9, -85.8);
+        const airlockRightMesh = new THREE.Mesh(new THREE.BoxGeometry(3.6, 5.8, 0.35), blastDoorMat);
+        airlockRightMesh.position.set(1.8, 0, 0);
+        this.airlockRightGroup.add(airlockRightMesh);
+        this.scene.add(this.airlockRightGroup);
+
+        // Metallic Descent Ramp leading down to Planet Surface
+        const rampMat = new THREE.MeshStandardMaterial({ color: 0x252e3b, metalness: 0.8, roughness: 0.4 });
+        const ramp = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), rampMat);
+        ramp.rotation.x = -Math.PI / 2 + 0.08;
+        ramp.position.set(0, 0.25, -90);
+        this.scene.add(ramp);
+        this.levelGeometry.push(ramp);
+
+        // =========================================================================
+        // --- SECTOR 3: EXOPLANET KELVON-9 SURFACE (ACT 3) ---
+        // =========================================================================
+        const planetTerrainMat = new THREE.MeshStandardMaterial({
+            color: 0x1f1424,
+            roughness: 0.92,
+            metalness: 0.12
         });
+        const planetGround = new THREE.Mesh(new THREE.PlaneGeometry(120, 140), planetTerrainMat);
+        planetGround.rotation.x = -Math.PI / 2;
+        planetGround.position.set(0, 0, -155);
+        this.scene.add(planetGround);
+        this.levelGeometry.push(planetGround);
 
-        // Floating Chronal Crystalline Obelisks in Act 3 Endless Vault
+        // Boundary Mountain Crags around the planet surface
+        const cragMat = new THREE.MeshStandardMaterial({ color: 0x181020, roughness: 0.95 });
+        [-60, 60].forEach(cx => {
+            const crag = new THREE.Mesh(new THREE.BoxGeometry(10, 24, 140), cragMat);
+            crag.position.set(cx, 12, -155);
+            this.scene.add(crag);
+            this.levelGeometry.push(crag);
+        });
+        const backRidge = new THREE.Mesh(new THREE.BoxGeometry(120, 24, 10), cragMat);
+        backRidge.position.set(0, 12, -225);
+        this.scene.add(backRidge);
+        this.levelGeometry.push(backRidge);
+
+        // Landed Spaceship Rear Exterior Hull (behind player at z = -86)
+        const shipHullMat = new THREE.MeshStandardMaterial({ color: 0x1a212d, metalness: 0.9, roughness: 0.3 });
+        const shipHullExterior = new THREE.Mesh(new THREE.BoxGeometry(40, 22, 6), shipHullMat);
+        shipHullExterior.position.set(0, 11, -83);
+        this.scene.add(shipHullExterior);
+        this.levelGeometry.push(shipHullExterior);
+
+        // Alien Celestial Sky Elements: Twin Moons & Nebula
+        const primaryMoon = new THREE.Mesh(
+            new THREE.SphereGeometry(16, 24, 24),
+            new THREE.MeshBasicMaterial({ color: 0x99ccff })
+        );
+        primaryMoon.position.set(38, 52, -190);
+        this.scene.add(primaryMoon);
+
+        const moonGlow = new THREE.PointLight(0x77bbff, 1.8, 220);
+        moonGlow.position.set(38, 52, -190);
+        this.scene.add(moonGlow);
+
+        const ringedMoonGroup = new THREE.Group();
+        ringedMoonGroup.position.set(-42, 58, -180);
+        const secMoon = new THREE.Mesh(new THREE.SphereGeometry(7, 18, 18), new THREE.MeshBasicMaterial({ color: 0xcc66ff }));
+        ringedMoonGroup.add(secMoon);
+        const moonRing = new THREE.Mesh(new THREE.TorusGeometry(12, 0.4, 8, 32), new THREE.MeshBasicMaterial({ color: 0xffaa55 }));
+        moonRing.rotation.x = Math.PI / 3;
+        ringedMoonGroup.add(moonRing);
+        this.scene.add(ringedMoonGroup);
+
+        // 8 Floating Chronal Crystalline Obelisks across the planetary surface
         const crystalMat = new THREE.MeshStandardMaterial({
             map: this.textures.anomalyCrystal,
-            roughness: 0.15,
-            metalness: 0.85,
-            emissive: 0x00f0ff,
-            emissiveIntensity: 0.5
+            roughness: 0.25,
+            metalness: 0.65,
+            emissive: 0x00ff88,
+            emissiveIntensity: 0.35
         });
-        [-10, 10].forEach(cx => {
-            [-115, -140, -165].forEach(cz => {
-                const crystalGroup = new THREE.Group();
-                crystalGroup.position.set(cx, 3.8, cz);
 
-                const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(1.4, 0), crystalMat);
+        [-18, 0, 18].forEach(cx => {
+            [-115, -145, -175].forEach(cz => {
+                if (cx === 0 && cz === -145) return; // Open central battle arena
+                const crystalGroup = new THREE.Group();
+                crystalGroup.position.set(cx, 4.2, cz);
+
+                const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(1.6, 0), crystalMat);
                 crystalGroup.add(crystal);
 
-                const orbitRing = new THREE.Mesh(new THREE.TorusGeometry(2.0, 0.06, 8, 24), new THREE.MeshBasicMaterial({ color: 0xaa44ff }));
+                const orbitRing = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.08, 8, 24), new THREE.MeshBasicMaterial({ color: 0xaa44ff }));
                 orbitRing.rotation.x = Math.PI / 2;
                 crystalGroup.add(orbitRing);
 
-                const crystalLight = new THREE.PointLight(0x00f0ff, 1.4, 12);
+                const crystalLight = new THREE.PointLight(0x00f0ff, 1.5, 14);
                 crystalGroup.add(crystalLight);
 
                 this.scene.add(crystalGroup);
@@ -1068,42 +1178,63 @@ class ChronoGame {
 
     setupUIEvents() {
         const commsDismissBtn = document.getElementById('comms-btn-dismiss');
+        const commsBox = document.getElementById('comms-transmission');
+        const dismissComms = () => {
+            if (commsBox) commsBox.style.display = 'none';
+            if (this.commsDismissTimeout) clearTimeout(this.commsDismissTimeout);
+        };
         if (commsDismissBtn) {
-            const dismissComms = () => {
-                const comms = document.getElementById('comms-transmission');
-                if (comms) comms.style.display = 'none';
-                if (this.commsDismissTimeout) clearTimeout(this.commsDismissTimeout);
-            };
             commsDismissBtn.addEventListener('click', dismissComms);
             commsDismissBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 dismissComms();
             }, { passive: false });
         }
+        if (commsBox) {
+            commsBox.addEventListener('click', (e) => {
+                if (e.target.id === 'comms-transmission' || e.target.closest('#comms-btn-dismiss')) {
+                    dismissComms();
+                }
+            });
+        }
+
+        const cinematicSkipBtn = document.getElementById('cinematic-skip-btn');
+        if (cinematicSkipBtn) {
+            cinematicSkipBtn.addEventListener('click', () => this.finishPlanetArrivalCutscene());
+            cinematicSkipBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.finishPlanetArrivalCutscene();
+            }, { passive: false });
+        }
+
+        // Universal Click & Touch Bind Helper
+        const bindTap = (elem, handler) => {
+            if (!elem) return;
+            elem.addEventListener('click', handler);
+            elem.addEventListener('touchstart', (e) => {
+                if (e.cancelable) e.preventDefault();
+                handler(e);
+            }, { passive: false });
+        };
 
         const btnSettings = document.getElementById('btn-settings-toggle');
         const settingsModal = document.getElementById('settings-modal');
         const btnCloseSettings = document.getElementById('btn-settings-close');
 
         if (btnSettings && settingsModal) {
-            const toggleSettings = (e) => {
-                if (e.cancelable) e.preventDefault();
+            bindTap(btnSettings, () => {
                 const isOpen = settingsModal.style.display === 'flex';
                 settingsModal.style.display = isOpen ? 'none' : 'flex';
-            };
-            btnSettings.addEventListener('click', toggleSettings);
-            btnSettings.addEventListener('touchstart', toggleSettings, { passive: false });
+            });
             if (btnCloseSettings) {
-                btnCloseSettings.addEventListener('click', () => { settingsModal.style.display = 'none'; });
-                btnCloseSettings.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
+                bindTap(btnCloseSettings, () => {
                     settingsModal.style.display = 'none';
-                }, { passive: false });
+                });
             }
         }
 
         document.querySelectorAll('.btn-act-warp').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            bindTap(btn, (e) => {
                 const act = parseInt(e.target.dataset.act, 10);
                 this.warpToAct(act);
                 if (settingsModal) settingsModal.style.display = 'none';
@@ -1119,19 +1250,158 @@ class ChronoGame {
 
         const btnAudio = document.getElementById('btn-toggle-audio');
         if (btnAudio) {
-            btnAudio.addEventListener('click', () => {
+            bindTap(btnAudio, () => {
                 const isMuted = btnAudio.classList.toggle('disabled');
                 btnAudio.textContent = isMuted ? "MUTED" : "ENABLED";
                 this.audio.setMuted(isMuted);
             });
         }
 
+        const btnShake = document.getElementById('btn-toggle-shake');
+        if (btnShake) {
+            bindTap(btnShake, () => {
+                this.screenShakeEnabled = !this.screenShakeEnabled;
+                btnShake.textContent = this.screenShakeEnabled ? "ENABLED" : "DISABLED";
+                btnShake.classList.toggle('disabled', !this.screenShakeEnabled);
+                if (this.audio) this.audio.playMenuClick();
+            });
+        }
+
+        const btnCrt = document.getElementById('btn-toggle-crt');
+        if (btnCrt) {
+            bindTap(btnCrt, () => {
+                this.crtScanlinesEnabled = !this.crtScanlinesEnabled;
+                btnCrt.textContent = this.crtScanlinesEnabled ? "ENABLED" : "DISABLED";
+                btnCrt.classList.toggle('disabled', !this.crtScanlinesEnabled);
+                const crtOverlay = document.querySelector('.crt-overlay');
+                if (crtOverlay) crtOverlay.style.display = this.crtScanlinesEnabled ? 'block' : 'none';
+                if (this.audio) this.audio.playMenuClick();
+            });
+        }
+
         const btnRestart = document.getElementById('btn-restart-game');
         if (btnRestart) {
-            btnRestart.addEventListener('click', () => {
+            bindTap(btnRestart, () => {
                 this.warpToAct(1);
                 if (settingsModal) settingsModal.style.display = 'none';
             });
+        }
+
+        const btnReturnMenu = document.getElementById('btn-return-main-menu');
+        if (btnReturnMenu) {
+            bindTap(btnReturnMenu, () => {
+                this.returnToMainMenu();
+            });
+        }
+
+        // --- TITLE MENU EVENTS & NAVIGATION ---
+        const btnMenuCampaign = document.getElementById('btn-menu-campaign');
+        bindTap(btnMenuCampaign, () => this.startCampaign(1));
+
+        const modalChapters = document.getElementById('modal-chapters');
+        const modalArsenal = document.getElementById('modal-arsenal');
+        const modalIntel = document.getElementById('modal-intel');
+
+        const btnMenuChapters = document.getElementById('btn-menu-chapters');
+        bindTap(btnMenuChapters, () => {
+            if (modalChapters) modalChapters.style.display = 'flex';
+            if (this.audio) this.audio.playMenuClick();
+        });
+
+        const btnMenuArsenal = document.getElementById('btn-menu-arsenal');
+        bindTap(btnMenuArsenal, () => {
+            if (modalArsenal) modalArsenal.style.display = 'flex';
+            if (this.audio) this.audio.playMenuClick();
+        });
+
+        const btnMenuIntel = document.getElementById('btn-menu-intel');
+        bindTap(btnMenuIntel, () => {
+            if (modalIntel) modalIntel.style.display = 'flex';
+            if (this.audio) this.audio.playMenuClick();
+        });
+
+        const btnMenuSettings = document.getElementById('btn-menu-settings');
+        bindTap(btnMenuSettings, () => {
+            if (settingsModal) settingsModal.style.display = 'flex';
+            if (this.audio) this.audio.playMenuClick();
+        });
+
+        // Modal Close Buttons
+        const btnCloseChapters = document.getElementById('btn-close-chapters');
+        bindTap(btnCloseChapters, () => { if (modalChapters) modalChapters.style.display = 'none'; });
+
+        const btnCloseArsenal = document.getElementById('btn-close-arsenal');
+        bindTap(btnCloseArsenal, () => { if (modalArsenal) modalArsenal.style.display = 'none'; });
+
+        const btnCloseIntel = document.getElementById('btn-close-intel');
+        bindTap(btnCloseIntel, () => { if (modalIntel) modalIntel.style.display = 'none'; });
+
+        // Warp from Chapter Select Modal
+        document.querySelectorAll('.btn-warp-chapter').forEach(btn => {
+            bindTap(btn, (e) => {
+                const target = e.currentTarget || e.target;
+                const act = parseInt(target.dataset.act, 10) || 1;
+                if (modalChapters) modalChapters.style.display = 'none';
+                this.startCampaign(act);
+            });
+        });
+
+        // Audio Pill Toggle on Title Bar
+        const audioPill = document.getElementById('title-audio-pill');
+        bindTap(audioPill, () => {
+            if (this.audio.isMuted) {
+                this.audio.setMuted(false);
+                audioPill.textContent = "🔊 AUDIO: UNMUTED";
+                this.audio.startTitleDrone();
+            } else {
+                this.audio.setMuted(true);
+                audioPill.textContent = "🔇 AUDIO: MUTED";
+                this.audio.stopTitleDrone();
+            }
+        });
+    }
+
+    startCampaign(actNum = 1) {
+        if (this.audio) {
+            this.audio.playWeaponCock();
+            this.audio.stopTitleDrone();
+        }
+
+        const titleScreen = document.getElementById('title-screen');
+        const hud = document.getElementById('hud-overlay');
+
+        if (titleScreen) {
+            titleScreen.classList.add('fade-out');
+            setTimeout(() => {
+                titleScreen.style.display = 'none';
+                titleScreen.classList.remove('fade-out');
+            }, 550);
+        }
+
+        if (hud) {
+            hud.style.display = 'block';
+        }
+
+        this.warpToAct(actNum);
+        this.gameState = 'PLAYING';
+    }
+
+    returnToMainMenu() {
+        this.gameState = 'TITLE_MENU';
+        const titleScreen = document.getElementById('title-screen');
+        const hud = document.getElementById('hud-overlay');
+        const settingsModal = document.getElementById('settings-modal');
+
+        if (settingsModal) settingsModal.style.display = 'none';
+        if (hud) hud.style.display = 'none';
+
+        if (titleScreen) {
+            titleScreen.style.display = 'flex';
+            titleScreen.classList.remove('fade-out');
+        }
+
+        if (this.audio && !this.audio.isMuted) {
+            this.audio.startTitleDrone();
         }
     }
 
@@ -1157,34 +1427,46 @@ class ChronoGame {
             this.kineticTrapUnlocked = false;
             this.gatesOpening = false;
             this.gateOpenAngle = 0;
-            if (this.gateLeftGroup) this.gateLeftGroup.rotation.y = 0;
-            if (this.gateRightGroup) this.gateRightGroup.rotation.y = 0;
+            if (this.gateLeftGroup) this.gateLeftGroup.position.x = 0;
+            if (this.gateRightGroup) this.gateRightGroup.position.x = 0;
+            this.airlockDoorsOpening = false;
+            this.airlockOpenProgress = 0;
+            if (this.airlockLeftGroup) this.airlockLeftGroup.position.x = 0;
+            if (this.airlockRightGroup) this.airlockRightGroup.position.x = 0;
             if (freezeBtn) freezeBtn.style.display = 'none';
             if (kineticBtn) kineticBtn.style.display = 'none';
-            this.updateActBanner("ACT 1: FROZEN ONSLAUGHT", "SURVIVE THE TIME-STASIS CHAMBER");
+            this.updateActBanner("ACT 1: FROZEN ONSLAUGHT", "SURVIVE THE CRYO STASIS HANGAR");
             this.spawnAct1Monsters();
         } else if (actNum === 2) {
             this.player.position.set(0, 0, -32);
             this.manualFreezeUnlocked = true;
             this.kineticTrapUnlocked = false;
             this.gatesOpening = true;
-            this.gateOpenAngle = Math.PI * 0.48;
-            if (this.gateLeftGroup) this.gateLeftGroup.rotation.y = -this.gateOpenAngle;
-            if (this.gateRightGroup) this.gateRightGroup.rotation.y = this.gateOpenAngle;
+            this.gateOpenAngle = 1.0;
+            if (this.gateLeftGroup) this.gateLeftGroup.position.x = -3.8;
+            if (this.gateRightGroup) this.gateRightGroup.position.x = 3.8;
+            this.airlockDoorsOpening = false;
+            this.airlockOpenProgress = 0;
+            if (this.airlockLeftGroup) this.airlockLeftGroup.position.x = 0;
+            if (this.airlockRightGroup) this.airlockRightGroup.position.x = 0;
             if (freezeBtn) freezeBtn.style.display = 'flex';
             if (kineticBtn) kineticBtn.style.display = 'none';
-            this.updateActBanner("ACT 2: THE KINETIC TRAP", "NAVIGATE THE CORRIDOR IN SLOW MOTION");
+            this.updateActBanner("ACT 2: THE KINETIC TRAP", "NAVIGATE CONDUIT CORRIDOR WITH SLOW VELOCITY OR TIME-FREEZE");
         } else if (actNum === 3) {
-            this.player.position.set(0, 0, -125);
+            this.player.position.set(0, 0, -98);
             this.manualFreezeUnlocked = true;
             this.kineticTrapUnlocked = true;
             this.gatesOpening = true;
-            this.gateOpenAngle = Math.PI * 0.48;
-            if (this.gateLeftGroup) this.gateLeftGroup.rotation.y = -this.gateOpenAngle;
-            if (this.gateRightGroup) this.gateRightGroup.rotation.y = this.gateOpenAngle;
+            this.gateOpenAngle = 1.0;
+            if (this.gateLeftGroup) this.gateLeftGroup.position.x = -3.8;
+            if (this.gateRightGroup) this.gateRightGroup.position.x = 3.8;
+            this.airlockDoorsOpening = true;
+            this.airlockOpenProgress = 1.0;
+            if (this.airlockLeftGroup) this.airlockLeftGroup.position.x = -4.2;
+            if (this.airlockRightGroup) this.airlockRightGroup.position.x = 4.2;
             if (freezeBtn) freezeBtn.style.display = 'flex';
             if (kineticBtn) kineticBtn.style.display = 'flex';
-            this.updateActBanner("ACT 3: THE BUGGED", "SURVIVE THE ENDLESS GLITCHED SWARM");
+            this.updateActBanner("ACT 3: EXOPLANET KELVON-9", "SURVIVE THE ALIEN GLITCHED SWARM");
             this.spawnAct3BuggedSwarm();
         }
         this.updateActiveWeaponView();
@@ -1223,12 +1505,15 @@ class ChronoGame {
         if (actObj) actObj.textContent = objective;
     }
 
-    showNotification(text) {
-        const badge = document.getElementById('hud-time-badge');
-        if (badge) {
-            badge.textContent = text;
-            badge.classList.add('pulsing');
-            setTimeout(() => { badge.classList.remove('pulsing'); }, 3000);
+    showNotification(text, durationMs = 5500) {
+        const banner = document.getElementById('hud-notification-banner');
+        if (banner) {
+            banner.textContent = text;
+            banner.classList.add('visible');
+            if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
+            this.notificationTimeout = setTimeout(() => {
+                banner.classList.remove('visible');
+            }, durationMs);
         }
     }
 
@@ -1253,6 +1538,13 @@ class ChronoGame {
     }
 
     updateCameraTrauma(delta) {
+        if (!this.screenShakeEnabled) {
+            this.cameraTrauma = 0;
+            this.shakeRotation.set(0, 0, 0);
+            this.shakeOffset.set(0, 0, 0);
+            return;
+        }
+
         if (this.cameraTrauma > 0) {
             const shake = this.cameraTrauma * this.cameraTrauma; // Quadratic trauma curve
             const maxPitch = 0.045;
@@ -1324,6 +1616,37 @@ class ChronoGame {
         const delta = Math.min((now - this.lastFrameTime) / 1000, 0.1);
         this.lastFrameTime = now;
 
+        // In Title Menu, smoothly orbit the courtyard camera and pause game entities
+        if (this.gameState === 'TITLE_MENU') {
+            const orbit = now * 0.00022;
+            this.camera.position.set(Math.sin(orbit) * 6, 2.4 + Math.sin(now * 0.0005) * 0.3, 16 + Math.cos(orbit) * 3);
+            this.camera.lookAt(0, 1.8, 0);
+
+            if (this.weaponContainer) this.weaponContainer.visible = false;
+
+            if (this.floatingCrystals) {
+                this.floatingCrystals.forEach((c, idx) => {
+                    c.rotation.y += 0.015 * (idx % 2 === 0 ? 1 : -1);
+                    c.position.y = 3.8 + Math.sin(now * 0.002 + idx) * 0.35;
+                });
+            }
+
+            this.renderer.render(this.scene, this.camera);
+            requestAnimationFrame((t) => this.gameLoop(t));
+            return;
+        }
+
+        if (this.inCutscene) {
+            this.updatePlanetArrivalCutscene(delta);
+            this.renderer.render(this.scene, this.camera);
+            requestAnimationFrame((t) => this.gameLoop(t));
+            return;
+        }
+
+        if (this.weaponContainer && !this.weaponContainer.visible) {
+            this.weaponContainer.visible = true;
+        }
+
         // Update Screen Shake Trauma & Weapon Sway/Bobbing
         this.updateCameraTrauma(delta);
         this.updateWeaponSwayAndBob(delta, now);
@@ -1361,6 +1684,7 @@ class ChronoGame {
         }
 
         this.handlePlayerMovement(delta);
+        this.updateCorridorMovementPuzzle(now, delta);
 
         // Stride slows down world to 0.25x slow-motion, Time Freeze freezes world completely
         const worldDelta = this.strideActive ? (delta * 0.25) : delta;
@@ -1375,11 +1699,11 @@ class ChronoGame {
         this.checkActObjectives();
         this.drawMinimapRadar();
 
-        // Animate Wooden Fortress Gates Swinging Open smoothly with sustained rumble
-        if (this.gatesOpening && this.gateOpenAngle < Math.PI * 0.48) {
-            this.gateOpenAngle = Math.min(Math.PI * 0.48, this.gateOpenAngle + delta * 1.4);
-            if (this.gateLeftGroup) this.gateLeftGroup.rotation.y = -this.gateOpenAngle;
-            if (this.gateRightGroup) this.gateRightGroup.rotation.y = this.gateOpenAngle;
+        // Animate Spaceship Blast Sliding Gate Open smoothly
+        if (this.gatesOpening && this.gateOpenAngle < 1.0) {
+            this.gateOpenAngle = Math.min(1.0, this.gateOpenAngle + delta * 1.2);
+            if (this.gateLeftGroup) this.gateLeftGroup.position.x = -this.gateOpenAngle * 3.8;
+            if (this.gateRightGroup) this.gateRightGroup.position.x = this.gateOpenAngle * 3.8;
             this.addTrauma(0.012);
         }
 
@@ -1419,9 +1743,10 @@ class ChronoGame {
         this.camera.rotation.y = this.shakeRotation.y;
         this.camera.rotation.z = this.strafeRoll + this.shakeRotation.z;
 
-        // Dynamic FOV: Zoom in on ADS (42 deg), expand on Kinetic Stride (+8 deg hyper-speed sensation)
+        // Dynamic FOV: Zoom in on ADS (42 deg), expand on Kinetic Stride (+14 deg hyper-speed sensation)
         let targetFOV = this.input.isADS ? 42 : 75;
-        if (this.strideActive) targetFOV += 8;
+        if (this.strideActive) targetFOV += 14;
+        if (this.strideActive && this.manualFreezeActive) targetFOV += 4;
 
         this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFOV, 0.22);
         this.camera.updateProjectionMatrix();
@@ -1468,9 +1793,9 @@ class ChronoGame {
         this.landingCompression = THREE.MathUtils.lerp(this.landingCompression, 0, delta * 14.0);
         this.lastGrounded = this.isGrounded;
 
-        // In Act 2 Kinetic Trap: Stride grants full immunity; normal speed triggers non-Newtonian dampener block
+        // In Act 2 Kinetic Trap: Stride OR Time Freeze grants full immunity; normal speed triggers non-Newtonian dampener block
         if (this.currentAct === 2 && this.player.position.z < -25 && this.player.position.z > -85) {
-            if (!this.strideActive) {
+            if (!this.strideActive && !this.manualFreezeActive) {
                 const checkedSpeed = AluLogicBridge.calculateKineticVelocity(targetSpeed, 0.055);
                 if (checkedSpeed === 0 && targetSpeed > 0.055) {
                     this.triggerKineticSpeedBlock();
@@ -1480,6 +1805,8 @@ class ChronoGame {
                 }
             }
         }
+
+        this.lastPlayerSpeed = targetSpeed;
 
         const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.playerYaw);
         const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.playerYaw);
@@ -1502,7 +1829,7 @@ class ChronoGame {
 
             const currentSin = Math.sin(this.strideCycle);
             if (currentSin < -0.92 && this.lastBobSin >= -0.92) {
-                let surface = "cobblestone";
+                let surface = "metal";
                 if (this.currentAct === 2) surface = "wood";
                 else if (this.currentAct === 3) surface = "metal";
                 this.audio.playFootstep(surface);
@@ -1758,23 +2085,26 @@ class ChronoGame {
             }
         });
 
-        if (closestMonster) {
-            if (!closestMonster.isPeacefulApproaching) {
-                closestMonster.isPeacefulApproaching = true;
-                this.talkingMonster = closestMonster;
-                closestMonster.children.forEach(c => {
-                    if (c.material) {
-                        c.material.color.setHex(0x00ffcc);
-                        if (c.material.emissive) c.material.emissive.setHex(0x004433);
-                    }
-                });
-                this.showNotification("SURVIVING MONSTER HALTS: APPROACHING TO SPEAK...");
-                this.audio.playMonsterSpeech();
-            }
+        if (!closestMonster) {
+            // If all initial monsters were eliminated, summon Azazel directly in front
+            this.spawnMonster(1);
+            closestMonster = this.monsters[this.monsters.length - 1];
+            closestMonster.position.set(this.player.position.x, 0, this.player.position.z - 4.5);
+            closestDist = 4.5;
+        }
 
-            if (closestDist <= 5.5) {
-                this.initiateSatiricalDialogue(closestMonster);
-            }
+        if (closestMonster) {
+            closestMonster.isPeacefulApproaching = true;
+            this.talkingMonster = closestMonster;
+            closestMonster.children.forEach(c => {
+                if (c.material) {
+                    c.material.color.setHex(0x00ffcc);
+                    if (c.material.emissive) c.material.emissive.setHex(0x004433);
+                }
+            });
+            this.showNotification("AZAZEL HALTS: SECURE COMM FREQUENCY ESTABLISHED...", 4500);
+            this.audio.playMonsterSpeech();
+            this.initiateSatiricalDialogue(closestMonster);
         }
     }
 
@@ -1809,19 +2139,19 @@ class ChronoGame {
         const commsBody = document.getElementById('comms-body');
 
         if (comms) {
-            if (commsSender) commsSender.textContent = dialogueData.title;
+            if (commsSender) commsSender.textContent = dialogueData.callsign || "AZAZEL // ANOMALY DEFECTOR";
             if (commsRoast) commsRoast.textContent = `"${dialogueData.roast}"`;
             if (commsBody) commsBody.textContent = dialogueData.text;
             comms.style.display = 'flex';
 
-            // Auto-dismiss after 10 seconds if not dismissed by tap
+            // Keep dialogue comfortable to read (18 seconds or dismiss by tap)
             if (this.commsDismissTimeout) clearTimeout(this.commsDismissTimeout);
             this.commsDismissTimeout = setTimeout(() => {
                 if (comms) comms.style.display = 'none';
-            }, 10000);
+            }, 18000);
         }
 
-        // Seamlessly unlock and swing open the courtyard fortress double doors
+        // Seamlessly slide open the spaceship hangar blast doors
         this.gatesOpening = true;
         this.audio.playPowerChime();
 
@@ -1830,8 +2160,8 @@ class ChronoGame {
         const freezeBtn = document.getElementById('btn-power-freeze');
         if (freezeBtn) freezeBtn.style.display = 'flex';
 
-        this.updateActBanner("ACT 1 // GATE UNLOCKED", "PROCEED THROUGH FORTRESS GATE TO SECTOR 2 FACILITY");
-        this.showNotification("CHRONO STASIS CORE SYNCED! TAP [FREEZE] OR PRESS [F] FOR 6s TIME STOP");
+        this.updateActBanner("ACT 1 // BLAST DOORS UNLOCKED", "PROCEED THROUGH HANGAR BLAST DOORS TO SECTOR 2 CORRIDOR");
+        this.showNotification("CHRONO-STASIS SYNCED! TAP [FREEZE] OR KEY [F] FOR 6s TIME STOP", 7000);
     }
 
     damageMonster(monster, damage, hitPoint, lookDir = null) {
@@ -1968,7 +2298,11 @@ class ChronoGame {
                 this.freezeTimer = this.freezeDuration;
                 this.manualFreezeActive = true;
                 this.audio.playTimeWarp();
-                this.showNotification("CHRONO-STASIS ENGAGED: WORLD FROZEN FOR 6.0 SECONDS!");
+                if (this.strideActive) {
+                    this.showNotification("SUPER-STASIS COMBO: HYPER-SPEED THROUGH FROZEN TIME!");
+                } else {
+                    this.showNotification("CHRONO-STASIS ENGAGED: WORLD FROZEN FOR 6.0 SECONDS!");
+                }
                 if (freezeBtn) freezeBtn.classList.add('power-active');
                 if (freezeVignette) freezeVignette.classList.add('active');
             } else {
@@ -1981,11 +2315,6 @@ class ChronoGame {
             this.freezeTimer = Math.max(0, this.freezeTimer - delta);
             if (freezeBtn) {
                 freezeBtn.textContent = `FREEZE (${this.freezeTimer.toFixed(1)}s)`;
-            }
-            const timeBadge = document.getElementById('hud-time-badge');
-            if (timeBadge) {
-                timeBadge.textContent = `CHRONO STASIS [${this.freezeTimer.toFixed(1)}s ACTIVE]`;
-                timeBadge.classList.add('pulsing');
             }
             if (this.freezeTimer <= 0) {
                 this.manualFreezeActive = false;
@@ -2006,7 +2335,11 @@ class ChronoGame {
                 this.strideTimer = this.strideDuration;
                 this.strideActive = true;
                 this.audio.playPowerChime();
-                this.showNotification("KINETIC STRIDE ENGAGED: 2.2x HYPER-SPEED (6.0s)!");
+                if (this.manualFreezeActive) {
+                    this.showNotification("SUPER-STASIS COMBO: HYPER-SPEED THROUGH FROZEN TIME!");
+                } else {
+                    this.showNotification("KINETIC STRIDE ENGAGED: 2.2x HYPER-SPEED (6.0s)!");
+                }
                 if (kineticBtn) kineticBtn.classList.add('power-active');
                 if (strideVignette) strideVignette.classList.add('active');
             } else {
@@ -2028,6 +2361,21 @@ class ChronoGame {
                 }
                 if (strideVignette) strideVignette.classList.remove('active');
                 this.showNotification("KINETIC STRIDE DEPLETED");
+            }
+        }
+
+        // Concurrent Super-Stasis Combo HUD State
+        const timeBadge = document.getElementById('hud-time-badge');
+        if (timeBadge) {
+            if (this.manualFreezeActive && this.strideActive) {
+                timeBadge.textContent = `SUPER-STASIS [F:${this.freezeTimer.toFixed(1)}s | S:${this.strideTimer.toFixed(1)}s]`;
+                timeBadge.classList.add('pulsing');
+            } else if (this.manualFreezeActive) {
+                timeBadge.textContent = `CHRONO STASIS [${this.freezeTimer.toFixed(1)}s ACTIVE]`;
+                timeBadge.classList.add('pulsing');
+            } else if (this.strideActive) {
+                timeBadge.textContent = `KINETIC STRIDE [${this.strideTimer.toFixed(1)}s ACTIVE]`;
+                timeBadge.classList.add('pulsing');
             }
         }
     }
@@ -2271,42 +2619,222 @@ class ChronoGame {
     }
 
     checkActObjectives() {
-        // Seamless transition from Act 1 Courtyard through opened wooden fortress doors into Sector 2
+        // Transition from Act 1 Hangar through opened blast doors into Sector 2 Corridor
         if (this.currentAct === 1 && this.gatesOpening && this.player.position.z < -25.5) {
             this.currentAct = 2;
-            this.updateActBanner("ACT 2: THE KINETIC TRAP", "NAVIGATE THE CORRIDOR IN SLOW MOTION");
-            this.showNotification("ENTERED SECTOR 2: KINETIC FIELD DETECTED");
+            this.updateActBanner("ACT 2: THE KINETIC TRAP", "NAVIGATE CORRIDOR WITH SLOW VELOCITY OR TIME-FREEZE");
+            this.showNotification("ENTERED SECTOR 2: KINETIC FIELD DETECTED // CROUCH OR FREEZE TIME", 5500);
             this.monsters.forEach(m => this.scene.remove(m));
             this.monsters = [];
         }
 
-        // Sector 2 Kinetic Core Retrieval
+        // Sector 2 to Act 3: When approaching airlock at z <= -84, trigger cinematic cutscene!
         if (this.currentAct === 2) {
-            const distToCore = this.player.position.distanceTo(this.kineticCoreMesh.position);
-            if (distToCore < 3.5) {
-                this.kineticTrapUnlocked = true;
-                const kineticBtn = document.getElementById('btn-power-kinetic');
-                if (kineticBtn) kineticBtn.style.display = 'flex';
-
-                this.audio.playPowerChime();
-                this.showNotification("OBTAINED: KINETIC STRIDE POWER! [TAP STRIDE / PRESS E]");
-
-                this.currentAct = 3;
-                this.updateActBanner("ACT 3: THE BUGGED", "SURVIVE THE ENDLESS GLITCHED SWARM");
-                this.spawnAct3BuggedSwarm();
-            } else if (this.player.position.z < -86) {
-                // Walked past neon EXIT sign directly into Act 3 Endless Vault
-                this.currentAct = 3;
-                this.kineticTrapUnlocked = true;
-                const kineticBtn = document.getElementById('btn-power-kinetic');
-                if (kineticBtn) kineticBtn.style.display = 'flex';
-                this.updateActBanner("ACT 3: THE BUGGED", "SURVIVE THE ENDLESS GLITCHED SWARM");
-                this.spawnAct3BuggedSwarm();
+            if (this.player.position.z <= -84 && !this.inCutscene) {
+                this.startPlanetArrivalCutscene();
             }
         }
 
         if (this.currentAct === 3 && this.monsters.length < 8) {
             this.spawnMonster(3);
+        }
+    }
+
+    startPlanetArrivalCutscene() {
+        if (this.inCutscene) return;
+        this.inCutscene = true;
+        this.cutsceneTimer = 0;
+        this.cutsceneDuration = 8.5;
+
+        // Hide HUD overlay and show cinematic letterbox overlay
+        const hud = document.getElementById('hud-overlay');
+        if (hud) hud.style.display = 'none';
+
+        const cinematicOverlay = document.getElementById('cinematic-overlay');
+        if (cinematicOverlay) cinematicOverlay.style.display = 'block';
+
+        const caption = document.getElementById('cinematic-caption');
+        if (caption) caption.textContent = "SECTOR 2 AIRLOCK // DECOMPRESSION CYCLE INITIATED";
+
+        // Hide weapon viewmodel
+        if (this.weaponContainer) this.weaponContainer.visible = false;
+
+        // Start airlock door opening sound and animation
+        this.airlockDoorsOpening = true;
+        if (this.audio) this.audio.playAirlockOpen();
+
+        // Reset player root to origin during cutscene so camera coordinates are in world space
+        this.player.position.set(0, 0, 0);
+        this.player.rotation.set(0, 0, 0);
+        this.playerYaw = 0;
+        this.playerPitch = 0;
+    }
+
+    updatePlanetArrivalCutscene(delta) {
+        this.cutsceneTimer += delta;
+        const t = this.cutsceneTimer;
+        const caption = document.getElementById('cinematic-caption');
+
+        // Animate airlock doors sliding open horizontally into bulkheads
+        if (this.airlockDoorsOpening && this.airlockOpenProgress < 1.0) {
+            this.airlockOpenProgress = Math.min(1.0, this.airlockOpenProgress + delta * 0.65);
+            if (this.airlockLeftGroup) this.airlockLeftGroup.position.x = -this.airlockOpenProgress * 4.2;
+            if (this.airlockRightGroup) this.airlockRightGroup.position.x = this.airlockOpenProgress * 4.2;
+            this.addTrauma(0.012);
+        }
+
+        // Camera path:
+        // Phase 1 (0.0 to 2.5s): Camera stays inside corridor facing airlock, doors part open, revealing glowing nebula horizon
+        if (t < 2.5) {
+            this.camera.position.set(0, 1.7, -81);
+            this.camera.rotation.set(0, 0, 0);
+            if (caption) caption.textContent = "SECTOR 2 AIRLOCK // DEPRESSURIZING EXPEDITION BAY";
+        }
+        // Phase 2 (2.5 to 5.5s): Camera glides forward through open airlock portal, across ramp, tilting up to alien sky
+        else if (t < 5.5) {
+            const prog = (t - 2.5) / 3.0; // 0 to 1
+            const camZ = THREE.MathUtils.lerp(-81, -94, prog);
+            const camY = THREE.MathUtils.lerp(1.7, 3.2, Math.sin(prog * Math.PI));
+            const pitch = THREE.MathUtils.lerp(0, 0.28, Math.sin(prog * Math.PI)); // tilt up to sky
+            this.camera.position.set(0, camY, camZ);
+            this.camera.rotation.set(pitch, 0, 0);
+            if (caption) caption.textContent = "EXPEDITION ARRIVAL: EXOPLANET KELVON-9 SURFACE";
+        }
+        // Phase 3 (5.5 to 8.5s): Camera settles down to player eye height at start of planet surface, leveling forward
+        else if (t < this.cutsceneDuration) {
+            const prog = (t - 5.5) / 3.0; // 0 to 1
+            const camZ = THREE.MathUtils.lerp(-94, -98, prog);
+            const camY = THREE.MathUtils.lerp(3.2, 1.7, prog);
+            const pitch = THREE.MathUtils.lerp(0.28, 0, prog);
+            this.camera.position.set(0, camY, camZ);
+            this.camera.rotation.set(pitch, 0, 0);
+            if (caption) caption.textContent = "CHRONAL ANOMALY DETECTED // GLITCH SWARM DETECTED ON SURFACE";
+        }
+        // Cutscene finished
+        else {
+            this.finishPlanetArrivalCutscene();
+        }
+    }
+
+    finishPlanetArrivalCutscene() {
+        if (!this.inCutscene) return;
+        this.inCutscene = false;
+
+        const cinematicOverlay = document.getElementById('cinematic-overlay');
+        if (cinematicOverlay) cinematicOverlay.style.display = 'none';
+
+        const hud = document.getElementById('hud-overlay');
+        if (hud) hud.style.display = 'block';
+
+        if (this.weaponContainer) this.weaponContainer.visible = true;
+
+        // Ensure airlock is fully open
+        this.airlockOpenProgress = 1.0;
+        if (this.airlockLeftGroup) this.airlockLeftGroup.position.x = -4.2;
+        if (this.airlockRightGroup) this.airlockRightGroup.position.x = 4.2;
+
+        // Position player on planet surface
+        this.player.position.set(0, 0, -98);
+        this.playerYaw = 0;
+        this.playerPitch = 0;
+        this.camera.position.set(0, 1.7, 0);
+        this.camera.rotation.set(0, 0, 0);
+
+        // Advance to Act 3
+        this.currentAct = 3;
+        this.kineticTrapUnlocked = true;
+        const kineticBtn = document.getElementById('btn-power-kinetic');
+        if (kineticBtn) kineticBtn.style.display = 'flex';
+
+        this.updateActBanner("ACT 3: EXOPLANET KELVON-9", "SURVIVE THE ALIEN GLITCHED SWARM");
+        this.showNotification("PLANETARY SURFACE REACHED! KINETIC STRIDE UNLOCKED [TAP STRIDE / KEY E]", 7000);
+        this.spawnAct3BuggedSwarm();
+    }
+
+    updateCorridorMovementPuzzle(now, delta) {
+        const velocityGauge = document.getElementById('kinetic-velocity-gauge');
+        const gaugeFill = document.getElementById('kinetic-gauge-fill');
+        const gaugeVal = document.getElementById('kinetic-gauge-val');
+
+        if (this.currentAct === 2) {
+            if (velocityGauge) velocityGauge.style.display = 'block';
+
+            const playerSpeed = this.lastPlayerSpeed || 0;
+            const maxSafeSpeed = 0.055;
+            const speedRatio = Math.min(1.0, playerSpeed / 0.14);
+
+            if (gaugeFill) gaugeFill.style.width = `${Math.round(speedRatio * 100)}%`;
+
+            let hazardState = "HARMONIC"; // "HARMONIC", "OVERLOAD", "FROZEN", "PHASE"
+            if (this.manualFreezeActive) {
+                hazardState = "FROZEN";
+                if (gaugeVal) gaugeVal.textContent = `STASIS ACTIVE [${this.freezeTimer.toFixed(1)}s] // HAZARD BYPASS`;
+                if (gaugeFill) gaugeFill.style.background = "#00f0ff";
+            } else if (this.strideActive) {
+                hazardState = "PHASE";
+                if (gaugeVal) gaugeVal.textContent = `KINETIC PHASE [${this.strideTimer.toFixed(1)}s] // 2.2x HYPER-STRIDE`;
+                if (gaugeFill) gaugeFill.style.background = "#ffd700";
+            } else if (playerSpeed <= maxSafeSpeed) {
+                hazardState = "HARMONIC";
+                if (gaugeVal) gaugeVal.textContent = `VELOCITY: ${(playerSpeed * 10).toFixed(2)} m/s [OPTIMAL HARMONIC]`;
+                if (gaugeFill) gaugeFill.style.background = "#00ff88";
+            } else {
+                hazardState = "OVERLOAD";
+                if (gaugeVal) gaugeVal.textContent = `VELOCITY: ${(playerSpeed * 10).toFixed(2)} m/s [WARNING: SPEED LOCK]`;
+                if (gaugeFill) gaugeFill.style.background = "#ff3344";
+            }
+
+            // Update each laser barrier's visual state based on proximity & movement
+            if (this.laserBarriers) {
+                this.laserBarriers.forEach(barrier => {
+                    const dz = Math.abs(this.player.position.z - barrier.z);
+                    let col = 0x00f0ff;
+                    let intensity = 0.9;
+                    let beamAlpha = 0.75;
+
+                    if (hazardState === "FROZEN") {
+                        col = 0x00f0ff; // Cold frozen stasis blue
+                        beamAlpha = 0.35;
+                    } else if (hazardState === "PHASE") {
+                        col = 0xffd700; // Phase gold
+                        beamAlpha = 0.4;
+                    } else if (hazardState === "HARMONIC") {
+                        col = 0x00ff88; // Harmonic emerald
+                        beamAlpha = dz < 4.0 ? 0.2 : 0.65;
+                    } else {
+                        col = 0xff2233; // Overload crimson
+                        beamAlpha = 0.85 + Math.sin(now * 0.015) * 0.15;
+                        intensity = 1.6;
+                    }
+
+                    barrier.statusMesh.material.color.setHex(col);
+                    barrier.statusLight.color.setHex(col);
+                    barrier.statusLight.intensity = intensity;
+                    barrier.beams.forEach(b => {
+                        b.material.color.setHex(col);
+                        b.material.opacity = beamAlpha;
+                        if (hazardState === "HARMONIC" && dz < 3.0) {
+                            // Lasers part/retract safely when moving slowly
+                            b.scale.set(0.1, 0.1, 0.1);
+                        } else {
+                            b.scale.set(1.0, 1.0, 1.0);
+                        }
+                    });
+
+                    // Collision / Repulsion if player rushes through without powers or slow-walking
+                    if (hazardState === "OVERLOAD" && dz < 0.9 && Math.abs(this.player.position.x) < 5.0) {
+                        if (now - this.lastKineticAlertTime > 1200) {
+                            this.lastKineticAlertTime = now;
+                            this.triggerKineticSpeedBlock();
+                            if (this.audio) this.audio.playLaserTrip();
+                            this.showNotification("KINETIC OVERLOAD: CROUCH OR SLOW-WALK TO HARMONIZE, OR FREEZE TIME");
+                            this.player.position.z = barrier.z + 1.2;
+                        }
+                    }
+                });
+            }
+        } else {
+            if (velocityGauge) velocityGauge.style.display = 'none';
         }
     }
 
@@ -2644,5 +3172,22 @@ window.addEventListener('DOMContentLoaded', () => {
     };
     window.game.debugJumpAndLand = function() {
         this.input.wantsJump = true;
+    };
+    window.game.debugTriggerCutscene = function() {
+        this.startPlanetArrivalCutscene();
+    };
+    window.game.debugFreeze = function() {
+        this.manualFreezeUnlocked = true;
+        this.input.wantsTimeFreeze = true;
+    };
+    window.game.debugStride = function() {
+        this.kineticTrapUnlocked = true;
+        this.input.wantsKineticPower = true;
+    };
+    window.game.debugSuperStasis = function() {
+        this.manualFreezeUnlocked = true;
+        this.kineticTrapUnlocked = true;
+        this.input.wantsTimeFreeze = true;
+        this.input.wantsKineticPower = true;
     };
 });

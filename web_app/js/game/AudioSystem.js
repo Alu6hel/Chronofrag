@@ -415,6 +415,195 @@ class ChronoAudioSystem {
 
         noise.start(now);
     }
+
+    // Title Ambient Stasis Drone
+    startTitleDrone() {
+        if (!this.ensureContext()) return;
+        if (this.titleDroneNode) return;
+
+        try {
+            const now = this.ctx.currentTime;
+            this.titleDroneGain = this.ctx.createGain();
+            this.titleDroneGain.gain.setValueAtTime(0.001, now);
+            this.titleDroneGain.gain.exponentialRampToValueAtTime(0.22, now + 1.5);
+
+            // Sub bass root stasis drone (55Hz A1)
+            const osc = this.ctx.createOscillator();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(55, now);
+
+            // Low Harmonic (110Hz A2)
+            const osc2 = this.ctx.createOscillator();
+            osc2.type = "sawtooth";
+            osc2.frequency.setValueAtTime(110, now);
+
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = "lowpass";
+            filter.frequency.setValueAtTime(160, now);
+
+            const filterLfo = this.ctx.createOscillator();
+            filterLfo.frequency.setValueAtTime(0.18, now);
+            const lfoGain = this.ctx.createGain();
+            lfoGain.gain.setValueAtTime(50, now);
+            filterLfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+
+            osc.connect(this.titleDroneGain);
+            osc2.connect(filter);
+            filter.connect(this.titleDroneGain);
+            this.titleDroneGain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc2.start(now);
+            filterLfo.start(now);
+
+            this.titleDroneNode = { osc, osc2, filterLfo, gain: this.titleDroneGain };
+        } catch (e) {
+            console.warn("Drone audio error", e);
+        }
+    }
+
+    stopTitleDrone() {
+        if (!this.titleDroneNode || !this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            this.titleDroneNode.gain.gain.setValueAtTime(this.titleDroneNode.gain.gain.value, now);
+            this.titleDroneNode.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+            setTimeout(() => {
+                try {
+                    if (this.titleDroneNode) {
+                        this.titleDroneNode.osc.stop();
+                        this.titleDroneNode.osc2.stop();
+                        this.titleDroneNode.filterLfo.stop();
+                        this.titleDroneNode = null;
+                    }
+                } catch (e) {}
+            }, 900);
+        } catch (e) {
+            this.titleDroneNode = null;
+        }
+    }
+
+    // Menu Click SFX
+    playMenuClick() {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.04);
+
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+    }
+
+    // Weapon Cock / Stasis Breach SFX on Campaign Start
+    playWeaponCock() {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+
+        // Slide racking metallic transient
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(740, now + 0.08);
+
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+
+        // Click-lock
+        setTimeout(() => {
+            if (!this.ctx) return;
+            const t2 = this.ctx.currentTime;
+            const osc2 = this.ctx.createOscillator();
+            const gain2 = this.ctx.createGain();
+            osc2.type = "square";
+            osc2.frequency.setValueAtTime(540, t2);
+            gain2.gain.setValueAtTime(0.5, t2);
+            gain2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.07);
+            osc2.connect(gain2);
+            gain2.connect(this.ctx.destination);
+            osc2.start(t2);
+            osc2.stop(t2 + 0.07);
+        }, 120);
+    }
+
+    // Heavy Spaceship Airlock Pneumatic Depressurization (Planet Arrival Cutscene)
+    playAirlockOpen() {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+
+        // Sub rumble
+        const sub = this.ctx.createOscillator();
+        const subGain = this.ctx.createGain();
+        sub.type = "sawtooth";
+        sub.frequency.setValueAtTime(80, now);
+        sub.frequency.exponentialRampToValueAtTime(32, now + 1.8);
+        subGain.gain.setValueAtTime(0.5, now);
+        subGain.gain.exponentialRampToValueAtTime(0.01, now + 1.8);
+        sub.connect(subGain);
+        subGain.connect(this.ctx.destination);
+        sub.start(now);
+        sub.stop(now + 1.8);
+
+        // High air steam hiss
+        const bufferSize = this.ctx.sampleRate * 2.0;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.9));
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(1400, now);
+        filter.frequency.exponentialRampToValueAtTime(400, now + 1.8);
+        filter.Q.value = 2.5;
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.4, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 1.8);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+        noise.start(now);
+    }
+
+    // Kinetic Laser Barrier Pulse Warning
+    playLaserTrip() {
+        if (!this.ensureContext()) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(440, now + 0.08);
+        osc.frequency.setValueAtTime(880, now + 0.16);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+    }
 }
 
 window.ChronoAudio = new ChronoAudioSystem();

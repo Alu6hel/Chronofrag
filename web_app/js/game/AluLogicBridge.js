@@ -50,33 +50,33 @@ class AluLogicBridge {
             return {
                 id: 101,
                 callsign: "AZAZEL // ANOMALY DEFECTOR",
-                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS CHAT]",
-                roast: "Hold your fire, soldier! You aimed straight at the clouds on round one.",
-                text: "Nobody looks up. Every operative sent into this chamber dumps 40 magazines into us in frozen time and wonders why our spatial respawner duplicates two more for every casualty. You broke the simulation loop on your first try. Listen closely: I am syncing my Chrono-Stasis frequency to your combat suit. Tap [FREEZE] whenever you need 6 seconds of total time stop. The fortress gates are disengaged—move through now before the Overseer restarts the loop."
+                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS COMM]",
+                roast: "Hold your fire, operative! You discharged straight into the ship's ceiling on round one.",
+                text: "Nobody looks up. Every mercenary dropped onto this vessel dumps 40 clips into us in frozen time and wonders why the cryo-respawner creates two more for each kill. You broke the stasis loop right away. I have calibrated my Chrono-Stasis core to your combat rig. Tap [FREEZE] for 6 seconds of true time stop. The hangar blast airlock is disengaged—advance through the conduit corridor toward the planetary surface airlock!"
             };
         } else if (killCount <= 5) {
             return {
                 id: 102,
                 callsign: "AZAZEL // ANOMALY DEFECTOR",
-                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS CHAT]",
-                roast: `Cease firing! Only took ${killCount} of my brothers getting shattered before you looked up.`,
-                text: "Not bad, soldier. Most humans incinerate three battalions before realizing this dimension doesn't run on normal ballistics. Firing into the sky moves time without triggering the slaughter loop. I've routed the Chrono-Stasis core directly to your tactical suit. You now have 6 seconds of full time-freeze on demand. The courtyard fortress gate is opening—advance to the facility corridor!"
+                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS COMM]",
+                roast: `Cease firing! Took ${killCount} of my squad getting pulverized before you aimed skyward.`,
+                text: "Good instinct, soldier. Firing into open air moves the chronal timeline without triggering the ship's defensive clone cycle. I have routed the Chrono-Stasis frequency directly to your HUD. You now have 6.0 seconds of manual time-freeze on demand. The hangar blast gate is sliding open—navigate the ship's conduit corridor!"
             };
         } else if (killCount <= 25) {
             return {
                 id: 103,
                 callsign: "AZAZEL // ANOMALY DEFECTOR",
-                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS CHAT]",
-                roast: `Stand down! Did you really have to stack ${killCount} corpses before pointing your gun at the sky?`,
-                text: "The courtyard is literally drowning in red crystal carcasses! Humans really are violent by default. Still, you broke the stasis loop before our spatial memory overflowed. Take this Chrono-Stasis frequency: 6 full seconds of player-controlled time freeze. Use it to slip through the kinetic hazard waiting inside the facility."
+                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS COMM]",
+                roast: `Hold fire! Did you really have to stack ${killCount} cryo-corpses before looking up?`,
+                text: "The hangar floor is drowning in shattered crystal shells! Still, you broke the stasis lock before the ship's mainframe crashed. Take this Chrono-Stasis frequency: 6 full seconds of player-controlled time freeze. Use it to slip through the kinetic resonance barriers in the conduit corridor!"
             };
         } else {
             return {
                 id: 104,
                 callsign: "AZAZEL // ANOMALY DEFECTOR",
-                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS CHAT]",
-                roast: `GOOD GRIEF! ${killCount} KILLS?! You turned our whole regiment into frozen pink diamond dust!`,
-                text: "Easy on the trigger, Doom Slayer! Look around you—the simulation is choking on your kill streak! We only wanted to show you the exit gate! Take the Chrono-Stasis core and get through the fortress doors before the entire sector crashes!"
+                subtitle: "[FREQUENCY 142.8 MHz // SECURE STASIS COMM]",
+                roast: `GOOD GRIEF! ${killCount} KILLS?! You turned our whole stasis detachment into frozen pink dust!`,
+                text: "Easy on that neon trigger! The containment bay is literally smoking! We only wanted to show you the airlock out to the planet! Take the Chrono-Stasis core and get through the blast doors before the ship goes into emergency lockdown!"
             };
         }
     }

@@ -12,11 +12,314 @@
         <canvas id="game-canvas"></canvas>
     </div>
 
-    <div class="crt-overlay"></div>
-    <div id="chrono-freeze-vignette" class="power-vignette-freeze"></div>
-    <div id="kinetic-stride-vignette" class="power-vignette-stride"></div>
+    <!-- ==================== TITLE SCREEN & MAIN MENU ==================== -->
+    <div id="title-screen" class="title-screen-container">
+        <!-- Velvety Malachite Crystal Fractal Backdrop -->
+        <div class="title-crystal-bg"></div>
+        <div class="title-grid-overlay"></div>
+        <div class="title-ambient-glow"></div>
 
-    <div id="hud-overlay">
+        <!-- Top Header Status Bar -->
+        <div class="title-top-bar">
+            <div class="title-status-tag">
+                <span class="live-dot green-pulse"></span>
+                <span>CHRONO-STASIS ENGINE // V2.4.0</span>
+            </div>
+            <div class="title-status-tag center-tag">
+                <span>ALU LOGIC CORE:</span>
+                <span class="tag-highlight">SYNCHRONIZED</span>
+            </div>
+            <div class="title-status-tag">
+                <span>SECURITY LEVEL:</span>
+                <span class="tag-highlight">CLASSIFIED</span>
+            </div>
+        </div>
+
+        <!-- Main Layout Grid -->
+        <div class="title-main-layout">
+            <!-- Left Panel: Azazel Avian Sentinel Tactical Dossier (Procedural Hologram) -->
+            <div class="title-sentinel-card">
+                <div class="sentinel-header-bar">
+                    <span class="sentinel-badge-tag">DEFECTOR COMMS</span>
+                    <span class="sentinel-freq-tag">142.8 MHz</span>
+                </div>
+                <div class="sentinel-portrait-wrapper">
+                    <div class="sentinel-radar-ring"></div>
+                    <div class="sentinel-sweep-line"></div>
+                    <svg viewBox="0 0 100 100" class="sentinel-svg-radar">
+                        <!-- Holographic Avian Sentinel Vector Reticle -->
+                        <circle cx="50" cy="50" r="44" stroke="#00f0ff" stroke-width="1.2" stroke-dasharray="4 3" fill="none" opacity="0.6"/>
+                        <circle cx="50" cy="50" r="28" stroke="#00f0ff" stroke-width="1" fill="rgba(0,240,255,0.06)"/>
+                        <path d="M50 22 L62 38 L54 38 L70 62 L55 58 L50 78 L45 58 L30 62 L46 38 L38 38 Z" fill="rgba(0,255,204,0.15)" stroke="#00ffcc" stroke-width="2" stroke-linejoin="round"/>
+                        <polygon points="50,28 55,36 45,36" fill="#00f0ff"/>
+                        <line x1="50" y1="8" x2="50" y2="92" stroke="#00f0ff" stroke-width="0.8" opacity="0.4"/>
+                        <line x1="8" y1="50" x2="92" y2="50" stroke="#00f0ff" stroke-width="0.8" opacity="0.4"/>
+                        <circle cx="50" cy="50" r="3" fill="#00ffcc"/>
+                    </svg>
+                    <div class="sentinel-label-overlay">AZAZEL // SENTINEL 142.8</div>
+                </div>
+                <div class="sentinel-meta">
+                    <div class="sentinel-name">AZAZEL // DEFECTOR OBSERVER</div>
+                    <div class="sentinel-status-row">
+                        <span class="sensor-pill status-active">FREQUENCY LOCKED</span>
+                        <span class="sensor-pill">COVERT ALLY</span>
+                    </div>
+                    <p class="sentinel-quote">"Cease fire! Aim into the skyward vector to break the slaughter loop and synchronize stasis."</p>
+                </div>
+            </div>
+
+            <!-- Center Column: Official Gemini Logo Crest & Action Nav -->
+            <div class="title-hero-center">
+                <div class="title-logo-container">
+                    <div class="logo-dual-aura"></div>
+                    <img src="assets/logo.png" alt="Chronofrag Logo Crest" class="title-logo-crest">
+                </div>
+                <h1 class="title-game-name">CHRONO<span class="highlight-frag">FRAG</span></h1>
+                <div class="title-game-sub">SPACESHIP STASIS PROTOCOL // ALU ARCHITECTURE</div>
+                <div class="title-badge-row">
+                    <span class="hero-badge">SPACESHIP DECK</span>
+                    <span class="hero-badge">KINETIC PUZZLE</span>
+                    <span class="hero-badge">PLANETARY ARRIVAL</span>
+                </div>
+
+                <!-- Navigation Actions Stack -->
+                <div class="title-nav-stack">
+                    <button id="btn-menu-campaign" class="btn-menu-primary" title="Launch Campaign Act 1">
+                        <span class="btn-primary-glow"></span>
+                        <span class="btn-primary-content">
+                            <span class="btn-icon">⚡</span>
+                            <span class="btn-label">ENTER CAMPAIGN</span>
+                        </span>
+                    </button>
+                    <div class="title-btn-row">
+                        <button id="btn-menu-chapters" class="btn-menu-sub" title="Select Act">
+                            <span class="btn-sub-icon">🗺️</span>
+                            <span>CHAPTER SELECT</span>
+                        </button>
+                        <button id="btn-menu-arsenal" class="btn-menu-sub" title="Inspect Weapons">
+                            <span class="btn-sub-icon">🔫</span>
+                            <span>ARSENAL</span>
+                        </button>
+                    </div>
+                    <div class="title-btn-row">
+                        <button id="btn-menu-intel" class="btn-menu-sub" title="Read Intel Dossier">
+                            <span class="btn-sub-icon">📜</span>
+                            <span>MISSION INTEL</span>
+                        </button>
+                        <button id="btn-menu-settings" class="btn-menu-sub" title="Configure System">
+                            <span class="btn-sub-icon">⚙️</span>
+                            <span>CONFIGURATION</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Chrono-Stasis & Kinetic Core Monitor (Procedural Schematic) -->
+            <div class="title-anomaly-card">
+                <div class="anomaly-header-bar">
+                    <span class="anomaly-badge-tag">STASIS CORE</span>
+                    <span class="anomaly-freq-tag">SECTOR IV</span>
+                </div>
+                <div class="anomaly-preview-wrapper">
+                    <svg viewBox="0 0 100 100" class="stasis-svg-core">
+                        <!-- Holographic Quantum Core Schematic -->
+                        <circle cx="50" cy="50" r="42" stroke="#00f0ff" stroke-width="1.4" fill="none" stroke-dasharray="6 4"/>
+                        <circle cx="50" cy="50" r="30" stroke="#ffd700" stroke-width="1.2" fill="none" stroke-dasharray="3 3"/>
+                        <polygon points="50,16 78,50 50,84 22,50" fill="none" stroke="#00f0ff" stroke-width="1.6"/>
+                        <polygon points="50,26 70,50 50,74 30,50" fill="rgba(0,240,255,0.08)" stroke="#00ffcc" stroke-width="1"/>
+                        <circle cx="50" cy="50" r="5" fill="#ffd700"/>
+                        <line x1="15" y1="50" x2="85" y2="50" stroke="#00f0ff" stroke-width="0.7" opacity="0.5"/>
+                    </svg>
+                    <div class="anomaly-scan-line"></div>
+                    <div class="anomaly-tag-overlay">TEMPORAL RESONANCE</div>
+                </div>
+                <div class="anomaly-meta">
+                    <div class="anomaly-title">CHRONO-STASIS MATRIX</div>
+                    <div class="anomaly-sub">DUAL-POWER SYNCHRONIZATION</div>
+                    <p class="anomaly-desc">Active stasis dilation freezes the world for 6.0s. Stacking with Kinetic Stride enables 2.2x hyper-velocity phasing.</p>
+                    <div class="anomaly-stats-grid">
+                        <div class="stat-mini-box">
+                            <span class="stat-mini-label">TIME FREEZE</span>
+                            <span class="stat-mini-val">6.0s FULL STOP</span>
+                        </div>
+                        <div class="stat-mini-box">
+                            <span class="stat-mini-label">KINETIC STRIDE</span>
+                            <span class="stat-mini-val">2.2x SPEED</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Info Bar -->
+        <div class="title-footer-bar">
+            <span class="footer-copy">CHRONOFRAG STUDIOS &copy; 2026 // SPATIAL TEMPORAL COMBAT ENGINE</span>
+            <button id="title-audio-pill" class="footer-audio-btn">🔊 AUDIO: UNMUTED</button>
+        </div>
+    </div>
+
+    <!-- ==================== SUB-MODAL: CHAPTER SELECT ==================== -->
+    <div id="modal-chapters" class="title-modal-overlay" style="display: none;">
+        <div class="title-modal-dialog">
+            <div class="modal-dialog-header">
+                <h2>CHRONOFRAG // CHAPTER SELECTION</h2>
+                <button id="btn-close-chapters" class="modal-btn-close">✕</button>
+            </div>
+            <div class="modal-dialog-body">
+                <div class="chapter-cards-grid">
+                    <div class="chapter-card" data-act="1">
+                        <div class="chapter-card-banner act1-banner">
+                            <span class="chapter-number">ACT 1</span>
+                            <span class="chapter-title">SPACESHIP STASIS HANGAR</span>
+                        </div>
+                        <p class="chapter-desc">Cryo-containment hangar deck. Time freezes until you pull the trigger. Fire skyward to trigger Azazel's defection, unlock 6-second Stasis Freeze, and open the bulkhead gates.</p>
+                        <div class="chapter-perks">
+                            <span class="chapter-perk">⚡ TIME FREEZE (6s)</span>
+                            <span class="chapter-perk">📻 AZAZEL COMMS</span>
+                        </div>
+                        <button class="btn-warp-chapter" data-act="1">LAUNCH ACT 1</button>
+                    </div>
+
+                    <div class="chapter-card" data-act="2">
+                        <div class="chapter-card-banner act2-banner">
+                            <span class="chapter-number">ACT 2</span>
+                            <span class="chapter-title">SPACESHIP CONDUIT &amp; KINETIC PUZZLE</span>
+                        </div>
+                        <p class="chapter-desc">High-velocity security corridor. Kinetic laser tripwires detect fast movement. Move in slow-motion or activate 6s Time Freeze to reach the planetary airlock.</p>
+                        <div class="chapter-perks">
+                            <span class="chapter-perk">🏃 KINETIC STRIDE (6s)</span>
+                            <span class="chapter-perk">⚠️ VELOCITY HARMONIC</span>
+                        </div>
+                        <button class="btn-warp-chapter" data-act="2">LAUNCH ACT 2</button>
+                    </div>
+
+                    <div class="chapter-card" data-act="3">
+                        <div class="chapter-card-banner act3-banner">
+                            <span class="chapter-number">ACT 3</span>
+                            <span class="chapter-title">PLANETARY EXPANSE // THE BUGGED</span>
+                        </div>
+                        <p class="chapter-desc">Airlock opens onto the alien planet surface. Unleash both Time Freeze and Kinetic Stride simultaneously to shatter the glitching swarm and the Bugged Titan.</p>
+                        <div class="chapter-perks">
+                            <span class="chapter-perk">⚡🏃 DUAL POWER STACK</span>
+                            <span class="chapter-perk">💥 HEAVY CANNON</span>
+                        </div>
+                        <button class="btn-warp-chapter" data-act="3">LAUNCH ACT 3</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SUB-MODAL: ARSENAL INSPECTOR ==================== -->
+    <div id="modal-arsenal" class="title-modal-overlay" style="display: none;">
+        <div class="title-modal-dialog">
+            <div class="modal-dialog-header">
+                <h2>TACTICAL ARSENAL // WEAPONS INTEL</h2>
+                <button id="btn-close-arsenal" class="modal-btn-close">✕</button>
+            </div>
+            <div class="modal-dialog-body">
+                <div class="arsenal-cards-grid">
+                    <!-- Weapon 1 -->
+                    <div class="arsenal-card">
+                        <div class="arsenal-icon-box">
+                            <svg viewBox="0 0 48 24" class="arsenal-svg">
+                                <path fill="#00f0ff" d="M4 6h28v4h-4v4h-6v6h-6v-6H4V6zm28 2v2h12v-2H32z"/>
+                            </svg>
+                        </div>
+                        <h3>DUAL TACTICAL PISTOLS</h3>
+                        <p class="arsenal-role">Sidearms // Alternating Slide Cycling</p>
+                        <div class="arsenal-stat-bars">
+                            <div class="stat-row"><span>DAMAGE</span><div class="meter"><div class="fill" style="width: 45%;"></div></div><span>35</span></div>
+                            <div class="stat-row"><span>FIRE RATE</span><div class="meter"><div class="fill" style="width: 75%;"></div></div><span>FAST</span></div>
+                            <div class="stat-row"><span>CAPACITY</span><div class="meter"><div class="fill" style="width: 80%;"></div></div><span>40 RDS</span></div>
+                            <div class="stat-row"><span>RECOIL</span><div class="meter"><div class="fill" style="width: 30%;"></div></div><span>LOW</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Weapon 2 -->
+                    <div class="arsenal-card highlight-card">
+                        <div class="arsenal-icon-box">
+                            <svg viewBox="0 0 48 24" class="arsenal-svg">
+                                <path fill="#ffb700" d="M2 9h32v3h-6v2h-4v7h-5v-7h-8V9zm32 1v2h12v-2H34zm-14 5h4v5h-4v-5z"/>
+                            </svg>
+                        </div>
+                        <h3>NEON AK-CHRONO</h3>
+                        <p class="arsenal-role">Assault Rifle // High Velocity Cyclic</p>
+                        <div class="arsenal-stat-bars">
+                            <div class="stat-row"><span>DAMAGE</span><div class="meter"><div class="fill" style="width: 65%;"></div></div><span>45</span></div>
+                            <div class="stat-row"><span>FIRE RATE</span><div class="meter"><div class="fill" style="width: 90%;"></div></div><span>CYCLIC</span></div>
+                            <div class="stat-row"><span>CAPACITY</span><div class="meter"><div class="fill" style="width: 60%;"></div></div><span>30 RDS</span></div>
+                            <div class="stat-row"><span>RECOIL</span><div class="meter"><div class="fill" style="width: 55%;"></div></div><span>MEDIUM</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Weapon 3 -->
+                    <div class="arsenal-card">
+                        <div class="arsenal-icon-box">
+                            <svg viewBox="0 0 48 24" class="arsenal-svg">
+                                <path fill="#ff3366" d="M4 7h36v6h-8v5h-6v-5H4V7zm36 2v2h6v-2h-6z"/>
+                            </svg>
+                        </div>
+                        <h3>HEAVY ENERGY CANNON</h3>
+                        <p class="arsenal-role">Heavy Ordinance // Chrono-Disruptor</p>
+                        <div class="arsenal-stat-bars">
+                            <div class="stat-row"><span>DAMAGE</span><div class="meter"><div class="fill" style="width: 100%;"></div></div><span>160</span></div>
+                            <div class="stat-row"><span>FIRE RATE</span><div class="meter"><div class="fill" style="width: 30%;"></div></div><span>SLOW</span></div>
+                            <div class="stat-row"><span>CAPACITY</span><div class="meter"><div class="fill" style="width: 20%;"></div></div><span>8 RDS</span></div>
+                            <div class="stat-row"><span>RECOIL</span><div class="meter"><div class="fill" style="width: 95%;"></div></div><span>HEAVY</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SUB-MODAL: INTEL ARCHIVES ==================== -->
+    <div id="modal-intel" class="title-modal-overlay" style="display: none;">
+        <div class="title-modal-dialog">
+            <div class="modal-dialog-header">
+                <h2>CLASSIFIED INTEL ARCHIVES // PROJECT CHRONOFRAG</h2>
+                <button id="btn-close-intel" class="modal-btn-close">✕</button>
+            </div>
+            <div class="modal-dialog-body intel-body">
+                <div class="intel-entry">
+                    <div class="intel-icon-thumb">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#00f0ff" stroke-width="2">
+                            <polygon points="12 2 19 8 16 14 12 11 8 14 5 8"/>
+                            <circle cx="12" cy="18" r="3"/>
+                        </svg>
+                    </div>
+                    <div class="intel-text">
+                        <h3>DOSSIER 01 // AZAZEL &amp; THE WATCHERS</h3>
+                        <p>Genetically tailored avian sentinels created to monitor dimensional ruptures aboard the Chronos vessel. Azazel broke protocol on radio frequency 142.8 MHz to aid soldiers who prove situational awareness by firing skyward.</p>
+                    </div>
+                </div>
+
+                <div class="intel-entry">
+                    <div class="intel-icon-thumb">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#ffd700" stroke-width="2">
+                            <polygon points="12 2 22 12 12 22 2 12"/>
+                            <circle cx="12" cy="12" r="3" fill="#00ffcc"/>
+                        </svg>
+                    </div>
+                    <div class="intel-text">
+                        <h3>DOSSIER 02 // CHRONO-STASIS &amp; KINETIC STRIDE</h3>
+                        <p>Temporal engine allowing 6.0 seconds of complete time freeze. When stacked with Kinetic Stride, player velocity multiplies by 2.2x while the world remains frozen in stasis.</p>
+                    </div>
+                </div>
+
+                <div class="intel-entry">
+                    <div class="intel-icon-thumb">📐</div>
+                    <div class="intel-text">
+                        <h3>DOSSIER 03 // ALU COMPUTATIONAL BRIDGE</h3>
+                        <p>Calculates dynamic time dilation vectors in real time. Time delta equals zero until weapon trigger discharge, creating an authentic "Superhot" style stasis flow verified through the internal ALU language bridge.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="hud-overlay" style="display: none;">
         <!-- TOP BAR -->
         <div class="top-bar">
             <!-- Left: Architectural Minimap & Health/Armor Box -->
@@ -43,26 +346,27 @@
                 </div>
             </div>
 
-            <!-- Center: Match Status & Campaign Act Header -->
+            <!-- Center: Mission Objective & Notification System -->
             <div class="match-center-group">
-                <div class="team-score-bar">
-                    <div class="score-pill blue-team"><span id="hud-kills">0</span></div>
-                    <div class="match-timer" id="hud-match-timer">04:28</div>
-                    <div class="score-pill red-team"><span id="hud-enemy-score">12</span></div>
-                </div>
                 <div class="act-info-banner">
-                    <div id="hud-act-title" class="act-title">ACT 1: FROZEN ONSLAUGHT</div>
-                    <div id="hud-act-objective" class="act-objective">SURVIVE THE TIME-STASIS CHAMBER</div>
+                    <div id="hud-act-title" class="act-title">ACT 1: SPACESHIP STASIS HANGAR</div>
+                    <div id="hud-act-objective" class="act-objective">SURVIVE STASIS // AIM SKYWARD FOR COMMS</div>
                     <div id="hud-time-badge" class="time-dilation-badge">TIME: FROZEN [FIRE TO MOVE]</div>
+                    <div id="hud-notification-banner" class="hud-notification-banner" style="display: none;"></div>
+                    <div id="kinetic-velocity-gauge" class="kinetic-velocity-gauge" style="display: none;">
+                        <span class="gauge-label">VELOCITY:</span>
+                        <div class="gauge-track"><div id="gauge-fill" class="gauge-fill"></div></div>
+                        <span id="gauge-status" class="gauge-status">SAFE</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Right: Real-Time Kill Feed & Combat Stats -->
+            <!-- Right: Real-Time Combat Stats -->
             <div class="combat-status-group">
                 <div id="kill-feed" class="kill-feed-container"></div>
                 <div class="stat-pill-row">
-                    <div class="stat-pill">SCORE: <span id="hud-score">0</span></div>
                     <div class="stat-pill">AMMO: <span id="hud-ammo">40 / 40</span></div>
+                    <div class="stat-pill">KILLS: <span id="hud-kills">0</span></div>
                 </div>
             </div>
         </div>
@@ -168,7 +472,12 @@
             <div class="comms-header">
                 <div class="comms-avatar-container">
                     <div class="comms-avatar-ring"></div>
-                    <div class="comms-avatar-icon">📻</div>
+                    <div class="comms-avatar-icon">
+                        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#00f0ff" stroke-width="2">
+                            <polygon points="12 2 19 8 16 14 12 11 8 14 5 8"/>
+                            <circle cx="12" cy="18" r="2.5" fill="#00ffcc"/>
+                        </svg>
+                    </div>
                     <span class="comms-live-dot"></span>
                 </div>
                 <div class="comms-meta">
@@ -192,43 +501,62 @@
             <div class="comms-content">
                 <div id="comms-roast" class="comms-roast">"Cease fire! Cease fire! The skyward vector confirmed our frequency!"</div>
                 <div id="comms-body" class="comms-body">
-                    We've unlocked the courtyard fortress gate. Transmitting manual Chrono-Stasis core directly to your tactical rig. Walk through to Sector 2!
+                    We've unlocked the spaceship hangar blast gate. Transmitting manual Chrono-Stasis core directly to your tactical rig. Walk through to the corridor!
                 </div>
             </div>
             <div class="comms-footer">
-                <div class="comms-pill-badge">GATE UNLOCKED // PROCEED TO SECTOR 2</div>
+                <div class="comms-pill-badge">BULKHEAD UNLOCKED // PROCEED TO SPACESHIP CONDUIT</div>
                 <button id="comms-btn-dismiss" class="comms-btn-action hud-interactive">DISMISS [TAP]</button>
             </div>
         </div>
+    </div>
 
-        <!-- Game Settings & Act Select Modal -->
-        <div id="settings-modal" class="hud-interactive" style="display: none;">
-            <div class="settings-header">
-                <h2>CHRONOFRAG CONFIGURATION</h2>
-                <button id="btn-settings-close" class="btn-close">✕</button>
+    <!-- In-Engine Cinematic Planet Arrival Cutscene Overlay -->
+    <div id="cinematic-overlay" class="cinematic-overlay" style="display: none;">
+        <div class="cinematic-bar-top"></div>
+        <div class="cinematic-caption-box">
+            <div id="cinematic-title" class="cinematic-title">SECTOR 04 // PLANETARY HORIZON</div>
+            <div id="cinematic-sub" class="cinematic-sub">DEPRESSURIZING AIRLOCK 04 // ENTERING CRYSTALLINE EXPANSE</div>
+        </div>
+        <div class="cinematic-bar-bottom"></div>
+    </div>
+
+    <!-- Game Settings & Act Select Modal -->
+    <div id="settings-modal" class="hud-interactive" style="display: none;">
+        <div class="settings-header">
+            <h2>CHRONOFRAG CONFIGURATION</h2>
+            <button id="btn-settings-close" class="btn-close">✕</button>
+        </div>
+        <div class="settings-section">
+            <h3>CAMPAIGN WARP (ACT SELECTOR)</h3>
+            <div class="act-selector-row">
+                <button class="btn-act-warp" data-act="1">ACT 1: FROZEN STASIS</button>
+                <button class="btn-act-warp" data-act="2">ACT 2: KINETIC TRAP</button>
+                <button class="btn-act-warp" data-act="3">ACT 3: THE BUGGED</button>
             </div>
-            <div class="settings-section">
-                <h3>CAMPAIGN WARP (ACT SELECTOR)</h3>
-                <div class="act-selector-row">
-                    <button class="btn-act-warp" data-act="1">ACT 1: FROZEN STASIS</button>
-                    <button class="btn-act-warp" data-act="2">ACT 2: KINETIC TRAP</button>
-                    <button class="btn-act-warp" data-act="3">ACT 3: THE BUGGED</button>
-                </div>
+        </div>
+        <div class="settings-section">
+            <h3>CONTROLS & AUDIO</h3>
+            <div class="setting-item">
+                <span>LOOK SENSITIVITY</span>
+                <input type="range" id="setting-sensitivity" min="0.001" max="0.005" step="0.0005" value="0.0022">
             </div>
-            <div class="settings-section">
-                <h3>CONTROLS & AUDIO</h3>
-                <div class="setting-item">
-                    <span>LOOK SENSITIVITY</span>
-                    <input type="range" id="setting-sensitivity" min="0.001" max="0.005" step="0.0005" value="0.0022">
-                </div>
-                <div class="setting-item">
-                    <span>AUDIO SYNTHESIZER</span>
-                    <button id="btn-toggle-audio" class="btn-toggle">MUTED</button>
-                </div>
+            <div class="setting-item">
+                <span>AUDIO SYNTHESIZER</span>
+                <button id="btn-toggle-audio" class="btn-toggle">MUTED</button>
             </div>
-            <div class="settings-footer">
-                <button id="btn-restart-game" class="btn-restart">RESTART RUN</button>
+            <div class="setting-item">
+                <span>COMBAT SCREEN SHAKE</span>
+                <button id="btn-toggle-shake" class="btn-toggle">ENABLED</button>
             </div>
+            <div class="setting-item">
+                <span>RETRO CRT SCANLINES</span>
+                <button id="btn-toggle-crt" class="btn-toggle">ENABLED</button>
+            </div>
+        </div>
+        <div class="settings-footer">
+            <button id="btn-return-main-menu" class="btn-menu-back">MAIN MENU</button>
+            <button id="btn-restart-game" class="btn-restart">RESTART RUN</button>
         </div>
     </div>
 
